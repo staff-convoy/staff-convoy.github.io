@@ -36,13 +36,14 @@
     var model = ws.getRow(FIRST);
     for (var i = 0; i < Math.max(ROWS, people.length); i++) {
       var r = FIRST + i, row = ws.getRow(r), p = people[i];
-      if (i >= ROWS) { row.height = model.height;
-        for (var c = 1; c <= COLS + 1; c++) row.getCell(c).style = copyStyle(model.getCell(c).style);
-        ws.mergeCells("B" + r + ":D" + r); ws.mergeCells("G" + r + ":H" + r); }
+      // every participant row looks exactly like the first one (the form's own rows differ slightly)
+      if (i > 0) { row.height = model.height; for (var c = 1; c <= COLS + 1; c++) row.getCell(c).style = copyStyle(model.getCell(c).style); }
+      if (!ws.getCell("B" + r).isMerged) ws.mergeCells("B" + r + ":D" + r);
+      if (!ws.getCell("G" + r).isMerged) ws.mergeCells("G" + r + ":H" + r);
       row.getCell(2).value = p ? p.name : null;
       row.getCell(5).value = p ? "UNIFIL" : null;
       row.getCell(6).value = p ? p.phone || "" : null;
-      row.getCell(7).value = null; row.getCell(9).value = null;
+      row.getCell(7).value = p ? p.callsign || "" : null; row.getCell(9).value = null;
     }
     var last = LAST + extra;
     ws.pageSetup.printArea = "A1:I" + last;

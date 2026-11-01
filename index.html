@@ -231,7 +231,7 @@ label.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-
   <div class="wrap">
     <div class="brand">
       <div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
-      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v33</div></div>
+      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v34</div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -1091,7 +1091,7 @@ function iscrData(T){ const sv = daySnapshot(T), ld = iscrLeader(T, sv), t = ISC
   return {requestDate: fmtD(isoShift(S.cvDate, -2)), missionDate: fmtD(S.cvDate), etd: t.etd, duration: '2 hours', depart: t.from, place: t.to,
     when: fmtD(S.cvDate) + ' ' + t.etd, from: t.from, to: t.to, remarks: '', objective: T === 'TO' ? 'To NAQOURA' : 'From NAQOURA',
     leader: ld ? ld.name + (ld.phone ? '   ' + ld.phone : '') : '', vehicles: (sv.vehicles || []).filter(v => v.count).map(v => v.plate).join(', '),
-    people: sv.staff.map(s => ({name: s.name, phone: s.phone || ''}))}; }
+    people: sv.staff.map(s => ({name: s.name, phone: s.phone || '', callsign: s.idNo || ''}))}; }
 async function iscrOut(kind){ const T = cvT(); if (S.cvBusy) return; S.cvBusy = true; toast('Preparing the security clearance…');
   try { await cvLoadLibs(); await iscrLibs(); const b64 = await iscrTemplate(); if (!b64) throw new Error('Load the ISCR form first.');
     const bin = atob(b64), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
