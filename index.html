@@ -231,7 +231,7 @@ label.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-
   <div class="wrap">
     <div class="brand">
       <div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
-      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v36</div></div>
+      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v37</div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -277,7 +277,7 @@ const MARKS = [['P','Present'],['A','Absent'],['L','Leave'],['S','Sick'],['O','O
 
 const S = { user:null, email:'', owner:false, me:null, team:{}, attendance:{}, notes:[], loaded:false,
   tab: remember('eu.tab') || 'convoy', orders:[], support:[], orderFilter:'open', supportFilter:'pending', openSupportId:null, openOrder:null, month: ym(new Date()), noteFilter:'pending', sites:[], readings:{}, kMonth: ym(new Date()), kFind:'', authMode:'signin', authMsg:'',
-  cvStaff:[], cvLoaded:false, cvCards:{}, cv:{date:'', direction:''}, cvCars:[], cvTrip: remember('eu.cvTrip') || '', cvDays:{}, cvCal:false, cvDate: isoDay(new Date()), cvMonth: isoDay(new Date()).slice(0, 7), cvInfoLoaded:false, cvConvs:{}, cvRegs:{}, cvRegsLoaded:false, cvLogins:null, member:false, login:'', profile:null, profileLoaded:false, regDate: regHash(), stCards:{}, cvSecs:null, cvSec:'', cvOnly:false, cvQuery:'', cvBusy:false };
+  cvStaff:[], cvLoaded:false, cvCards:{}, cv:{date:'', direction:''}, cvCars:[], cvTrip: remember('eu.cvTrip') || '', cvDays:{}, cvCal:false, cvDate: isoDay(new Date()), cvMonth: isoDay(new Date()).slice(0, 7), cvInfoLoaded:false, cvNotes:[], cvConvs:{}, cvRegs:{}, cvRegsLoaded:false, cvLogins:null, member:false, login:'', profile:null, profileLoaded:false, regDate: regHash(), stCards:{}, cvSecs:null, cvSec:'', cvOnly:false, cvQuery:'', cvBusy:false };
 let cvCardsOn = false;
 
 if (!CFG.firebase || !CFG.firebase.apiKey) {
@@ -329,7 +329,7 @@ function listen(){
 function cvListenInfo(){
   {
     unsubs.push(db.collection('convoyInfo').onSnapshot(s => {
-      S.cvCars = []; const days = {}, convs = {}, rank = {day: 3, saved: 2, trip: 1};
+      S.cvCars = []; const days = {}, convs = {}, notes = [], rank = {day: 3, saved: 2, trip: 1};
       // older records ("saved" trips and the two working trips) still show, a "day" record wins
       const put = (date, T, rec) => { if (!date || !TRIP[T]) return; const d = days[date] = days[date] || {};
         if (!d[T] || rank[rec.src] > rank[d[T].src]) d[T] = rec; };
@@ -338,11 +338,12 @@ function cvListenInfo(){
         else if (d.id === 'current') S.cv = {date: x.date || '', direction: x.direction || ''};
         else if (d.id === 'sections') S.cvSecs = x.list || null;
         else if (x.kind === 'conv') convs[x.date] = x;
+        else if (x.kind === 'cnote') notes.push({id: d.id, ...x});
         else if (x.kind === 'day') put(x.date, x.dir, {src: 'day', people: x.people || {}, drivers: x.drivers || {}, leader: x.leader || '', staff: x.staff, vehicles: x.vehicles});
         else if (x.kind === 'saved') { const people = {}, drivers = {}; (x.staff || []).forEach(p => people[p.key] = p.plate || ''); (x.vehicles || []).forEach(v => { if (v.driver) drivers[v.plate] = v.driver; });
           put(x.date, x.dir, {src: 'saved', people, drivers, staff: x.staff, vehicles: x.vehicles}); }
         else if (d.id === 'tripTO' || d.id === 'tripFROM') put(x.date, d.id.slice(4), {src: 'trip', people: x.people || {}, drivers: x.drivers || {}}); });
-      S.cvDays = days; S.cvConvs = convs; S.cvInfoLoaded = true; cvApplyRegs(); render(); }, e => { console.warn(e); S.cvInfoLoaded = true; render(); }));
+      S.cvDays = days; S.cvConvs = convs; S.cvNotes = notes.sort((a, b) => b.at - a.at); S.cvInfoLoaded = true; cvApplyRegs(); render(); }, e => { console.warn(e); S.cvInfoLoaded = true; render(); }));
   }
 }
 // ID card pictures are large, so they load only once the Convoy tab is opened
@@ -542,19 +543,23 @@ function mailTeam(topic, text){
   const body = text + '\n\n- ' + (S.owner ? 'Supervisor' : nameOf(S.email)) + '\nOpen the site: ' + location.origin;
   location.href = 'mailto:' + to.join(',') + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
 }
+/* --- Notes for the critical staff: written by the supervisor, emailed to the staff, read by staff on their page --- */
+const staffEmails = () => [...new Set(S.cvStaff.map(s => (s.email || '').trim().toLowerCase()).filter(Boolean))];
+function mailStaff(topic, text){ const to = staffEmails();
+  if (!to.length) { toast('No staff email yet. Add emails with Edit on the staff cards.', true); return; }
+  const subj = 'Critical staff convoy' + (topic ? ': ' + topic : '');
+  const body = text + '\n\n- Elias Farah\n' + location.origin + location.pathname;
+  location.href = 'mailto:' + to.join(',') + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body); }
+const noteCard = (n, mine) => `<div class="card"><div class="row"><span class="small muted">${esc(fmtWhen(n.at))}</span><span class="spacer"></span>${mine ? `<button class="btn sm" data-act="mailNote" data-id="${n.id}">Email staff</button><button class="btn sm ghost" data-act="delNote" data-id="${n.id}">Delete</button>` : ''}</div>
+  ${n.topic ? `<div style="font-weight:700;margin-top:4px">${esc(n.topic)}</div>` : ''}<div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:4px">${esc(n.text)}</div></div>`;
 function notesView(){
-  const f = S.noteFilter; const list = S.notes.filter(n => f === 'all' || (f === 'pending' ? !n.done : n.done));
-  return `<div class="stack"><form id="fNote" class="card stack" style="gap:8px"><input class="inp" id="nTopic" maxlength="80" placeholder="Task or site (optional)">
-  <textarea class="inp" id="nText" required maxlength="1500" placeholder="Write a note for the team: what is still pending, parts needed, who to call"></textarea>
-  <div class="row"><span class="spacer"></span><button class="btn" type="submit" data-mail="1">Share + email team</button><button class="btn primary" type="submit">Share note</button></div></form>
-  <div class="seg">${[['pending','Pending'],['done','Done'],['all','All']].map(([k,l]) => `<button data-act="noteFilter" data-v="${k}" aria-pressed="${f===k}">${l}</button>`).join('')}</div>
-  ${list.length ? list.map(n => `<div class="card ${n.done?'':'hi'}"><div class="row"><span class="small muted"><b>${esc(nameOf(n.by))}</b> · ${esc(ago(n.at && n.at.toMillis ? n.at.toMillis() : 0))}</span><span class="spacer"></span>
-    <span class="pill ${n.done?'p-done':'p-pend'}">${n.done?'Done':'Pending'}</span></div>
-    ${n.topic ? `<div style="font-weight:600;margin-top:4px">${esc(n.topic)}</div>` : ''}<div style="white-space:pre-wrap;overflow-wrap:anywhere;margin-top:4px">${esc(n.text)}</div>
-    <div class="row" style="margin-top:8px"><button class="btn sm" data-act="toggleNote" data-id="${n.id}">${n.done?'Reopen':'Mark done'}</button><button class="btn sm" data-act="mailNote" data-id="${n.id}">Email team</button>
-    ${(S.owner || n.by === S.email) ? `<button class="btn sm ghost" data-act="delNote" data-id="${n.id}">Delete</button>` : ''}${n.done && n.doneBy ? `<span class="small muted">Closed by ${esc(nameOf(n.doneBy))}</span>` : ''}</div></div>`).join('')
-  : `<div class="empty"><b>${f==='done'?'No closed notes':'No pending notes'}</b>Notes you share are visible to the whole team.</div>`}</div>`;
-}
+  if (!S.owner) return `<div class="empty"><b>Notes</b>Only the supervisor writes notes.</div>`;
+  const n = staffEmails().length;
+  return `<div class="stack"><form id="fNote" class="card stack" style="gap:8px"><h3 style="margin:0">Note for the critical staff</h3>
+  <input class="inp" id="nTopic" maxlength="80" placeholder="Subject (optional), e.g. Convoy 05/11 open">
+  <textarea class="inp" id="nText" required maxlength="1500" placeholder="Write your note. Staff see it on their page when they sign in with their ID."></textarea>
+  <div class="row"><span class="small muted">${n} staff with an email</span><span class="spacer"></span><button class="btn" type="submit" data-mail="1">Share + email staff</button><button class="btn primary" type="submit">Share note</button></div></form>
+  ${S.cvNotes.length ? S.cvNotes.map(x => noteCard(x, true)).join('') : `<div class="empty"><b>No notes yet</b>Notes you share show on the staff page.</div>`}</div>`; }
 
 /* --- Work orders --- */
 const newCount = () => S.orders.filter(o => o.status === 'new').length;
@@ -841,7 +846,8 @@ function regView(){
   const today = isoDay(new Date()), list = Object.values(S.cvConvs).filter(c => c.date >= today).sort((a, b) => a.date < b.date ? -1 : 1);
   const asked = S.regDate && S.cvConvs[S.regDate] ? S.regDate : '', date = asked || (list[0] || {}).date;
   const lost = S.regDate && !S.cvConvs[S.regDate] ? `<div class="err">The convoy of ${fmtD(S.regDate)} is not open for registration.</div>` : '';
-  if (!date) return `<div class="stack">${lost}<div class="empty"><b>No convoy is open right now</b>The supervisor sends the link in the WhatsApp group when a new convoy opens.</div></div>`;
+  const notesHtml = S.cvNotes.length ? `<h3 class="sechead">Notes from the supervisor</h3>${S.cvNotes.slice(0, 10).map(x => noteCard(x, false)).join('')}` : '';
+  if (!date) return `<div class="stack">${lost}<div class="empty"><b>No convoy is open right now</b>The supervisor sends the link in the WhatsApp group when a new convoy opens.</div>${notesHtml}</div>`;
   S.regShown = date;
   const c = S.cvConvs[date], mine = S.cvRegs[date + '_' + S.login], open = regOpenNow(c), dt = new Date(date + 'T12:00');
   const picker = list.length > 1 || (asked && !list.some(x => x.date === asked)) ? `<div class="seg">${list.map(x => `<button data-act="regPick" data-v="${x.date}" aria-pressed="${x.date === date}">${fmtD(x.date)}</button>`).join('')}</div>` : '';
@@ -864,7 +870,8 @@ function regView(){
     <div class="row"><h2 style="margin:0">Convoy ${DAYS[dt.getDay()]} ${fmtD(date)}</h2><span class="spacer"></span><span class="st ${open ? 'ok' : 'no'}">${open ? 'Registration open until ' + fmtWhen(c.closesAt) : 'Registration closed'}</span></div>
     <div class="small muted">${esc(S.profile.name)} · ${esc(S.profile.idNo)} · escorted by the Irish contingent</div>
     ${body}</div>
-  ${people}</div>`; }
+  ${people}
+  ${notesHtml}</div>`; }
 async function regSubmit(){ const date = S.regShown, c = S.cvConvs[date], msg = t => { const m = $('#regMsg'); if (m) m.textContent = t; };
   const dir = (document.querySelector('input[name="regDir"]:checked') || {}).value, drive = !!($('#regDrive') || {}).checked;
   if (!dir) { msg('Choose To Naqoura or From Naqoura.'); return; }
@@ -1189,11 +1196,11 @@ document.addEventListener('click', e => {
   if (a === 'notifyOn') Notification.requestPermission().then(() => render());
   if (a === 'setStatus') db.collection('orders').doc(t.dataset.id).update({status: t.dataset.v, updatedAt: Date.now(), ...logEntry({status: t.dataset.v})}).catch(failed);
   if (a === 'delOrder') { if (t.dataset.confirm) { db.collection('orders').doc(t.dataset.id).delete().catch(failed); closeSheet(); } else { t.dataset.confirm = 1; t.textContent = 'Tap again to delete'; t.classList.add('danger'); } }
-  if (a === 'mailNote') { const n = S.notes.find(x => x.id === t.dataset.id); if (n) mailTeam(n.topic, n.text); }
+  if (a === 'mailNote') { const n = S.cvNotes.find(x => x.id === t.dataset.id); if (n) mailStaff(n.topic, n.text); }
   if (a === 'noteFilter') { S.noteFilter = t.dataset.v; render(); }
   if (a === 'toggleNote') { const n = S.notes.find(x => x.id === t.dataset.id);
     db.collection('notes').doc(n.id).update(n.done ? {done: false, doneBy: null} : {done: true, doneBy: S.email}).catch(failed); }
-  if (a === 'delNote') { if (t.dataset.confirm) db.collection('notes').doc(t.dataset.id).delete().catch(failed); else { t.dataset.confirm = 1; t.textContent = 'Tap again to delete'; t.classList.add('danger'); } }
+  if (a === 'delNote') { if (t.dataset.confirm) db.collection('convoyInfo').doc(t.dataset.id).delete().catch(failed); else { t.dataset.confirm = 1; t.textContent = 'Tap again to delete'; t.classList.add('danger'); } }
   if (a === 'revoke') db.collection('team').doc(t.dataset.e).update({active: false}).then(() => toast('Access removed')).catch(failed);
   if (a === 'restore') db.collection('team').doc(t.dataset.e).update({active: true}).catch(failed);
   if (a === 'cvTrip') { S.cvTrip = t.dataset.v; remember('eu.cvTrip', S.cvTrip); render(); }
@@ -1290,9 +1297,9 @@ document.addEventListener('submit', e => {
     closeSheet(); }
   if (f.id === 'fLog') { const txt = val('logText'); if (!txt) return;
     db.collection('orders').doc(f.dataset.id).update({updatedAt: Date.now(), ...logEntry({text: txt})}).then(() => { const i = $('#logText'); if (i) i.value = ''; }).catch(failed); }
-  if (f.id === 'fNote') { const txt = val('nText'); if (!txt) return; const nt = val('nTopic'); if (e.submitter && e.submitter.dataset.mail) mailTeam(val('nTopic'), txt);
-    db.collection('notes').add({topic: val('nTopic'), text: txt, done: false, by: S.email, at: firebase.firestore.FieldValue.serverTimestamp()})
-      .then(() => { notifyPhones('New note for the team'); const a = $('#nText'), b = $('#nTopic'); if (a) a.value = ''; if (b) b.value = ''; a && a.blur(); }).catch(failed); }
+  if (f.id === 'fNote') { const txt = val('nText'), topic = val('nTopic'); if (!txt || !S.owner) return; if (e.submitter && e.submitter.dataset.mail) mailStaff(topic, txt);
+    const at = Date.now(); db.collection('convoyInfo').doc('note_' + at).set({kind: 'cnote', topic, text: txt, at})
+      .then(() => { toast('Note shared'); const a = $('#nText'), b = $('#nTopic'); if (a) a.value = ''; if (b) b.value = ''; a && a.blur(); }).catch(failed); }
   if (f.id === 'fSites') { const have = new Set(S.sites.map(x => x.name.toLowerCase())); let no = Math.max(0, ...S.sites.map(x => x.no || 0));
     const isNum = x => x !== '' && !isNaN(Number(x.replace(/[\s,]/g, '')));
     const list = val('kSites').split(/\r?\n/).map(l => l.split('\t').map(x => x.trim()).filter(Boolean)).filter(c => c.length).map(c => {
