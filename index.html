@@ -231,7 +231,7 @@ label.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-
   <div class="wrap">
     <div class="brand">
       <div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
-      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v35</div></div>
+      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v36</div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -754,6 +754,9 @@ function regListSheet(){ const regs = regsFor(S.cvDate);
 async function regOpen(){ const ms = new Date(val('regClose')).getTime();
   if (!ms || ms <= Date.now()) { toast('Choose a closing time in the future'); return; }
   try { await db.collection('convoyInfo').doc('conv_' + S.cvDate).set({kind: 'conv', date: S.cvDate, closesAt: ms, createdAt: Date.now()}); toast('Registration open. Copy the link for WhatsApp.'); } catch (e) { failed(e); } }
+function copyText(txt, msg, urgent){ const done = () => toast(msg, urgent);
+  const old = () => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Could not copy'); } ta.remove(); };
+  try { navigator.clipboard.writeText(txt).then(done, old); } catch (e) { old(); } }
 function regCopy(){ const txt = regMessage(S.cvDate);
   const done = () => toast('Copied. Paste it in the WhatsApp group.');
   const old = () => { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); done(); } catch (e) { toast('Select the link and copy it'); } ta.remove(); };
@@ -919,13 +922,13 @@ function cvSecRow(){ const T = cvT(), used = cvSecList().filter(x => S.cvStaff.s
     const n = S.cvStaff.filter(s => lc(secOf(s)) === lc(x) && onTrip(T, s.key)).length;
     return `<button class="car" data-act="cvSec" data-v="${esc(x)}" aria-pressed="${lc(S.cvSec) === lc(x)}">${esc(x)} <b>${n}</b></button>`; }).join('')}</div>`; }
 function cvVisible(s){ if (S.cvOnly && !onTrip(cvT(), s.key)) return false; if (S.cvSec && lc(secOf(s)) !== lc(S.cvSec)) return false; const q = S.cvQuery.trim().toLowerCase();
-  return !q || [s.no, s.name, s.idNo, s.phone, s.section].join(' ').toLowerCase().includes(q); }
+  return !q || [s.no, s.name, s.idNo, s.phone, s.section, s.email].join(' ').toLowerCase().includes(q); }
 function cvCard(s){ const img = S.cvCards[s.key], T = cvT(), on = onTrip(T, s.key);
   return `<div class="card cvcard ${on?'on':''}" data-cv="${esc(s.key)}" ${cvVisible(s)?'':'hidden'}>
   <label class="pick"><input type="checkbox" data-cvtick="${esc(s.key)}" ${on?'checked':''} aria-label="${esc(TRIP[T].name)}: ${esc(s.name)}">
   <span class="cvno">${s.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(s.name)}</span><br><span class="small muted" style="font-family:var(--f-mono)">${esc(s.idNo||'No ID number')}</span></span></label>
   <div class="cvthumb">${img ? `<img alt="ID card of ${esc(s.name)}" src="${img}">` : (s.hasImg ? 'Loading picture…' : 'No ID card')}</div>
-  <div class="meta"><span style="font-family:var(--f-mono)">${esc(s.phone||'No phone')}</span>${(rg => rg ? `<span class="regtag">✍ Registered: ${esc(TRIP[rg.dir].name)}${rg.canDrive ? ' · 🚗 can drive' : ''}</span>` : '')(regOf(S.cvDate, s.key))}</div>
+  <div class="meta"><span style="font-family:var(--f-mono)">${esc(s.phone||'No phone')}</span><span class="small" style="overflow-wrap:anywhere">${s.email ? esc(s.email) : '<span class="muted">No email</span>'}</span>${(rg => rg ? `<span class="regtag">✍ Registered: ${esc(TRIP[rg.dir].name)}${rg.canDrive ? ' · 🚗 can drive' : ''}</span>` : '')(regOf(S.cvDate, s.key))}</div>
   <select class="cvcar" data-cvcar="${esc(s.key)}" aria-label="Vehicle for ${esc(s.name)}">${cvCarOptions(carOf(T, s.key))}</select>
   <div class="row"><span class="cvlbl"><span class="pill ${on?'p-done':'p-off'}">${on ? esc(TRIP[T].name) : 'Not on this trip'}</span><span class="cvsecname">${esc(secOf(s))}</span></span><span class="spacer"></span><button class="btn sm ghost" data-act="cvEdit" data-id="${esc(s.key)}">Edit</button></div></div>`; }
 
@@ -1025,7 +1028,8 @@ function cvForm(s){ cvEditing = s || null; cvPending = null; const sec = s ? sec
   <label class="f">Name<input id="cvName" required maxlength="80" value="${esc(s && s.name)}" placeholder="e.g. Elias FARAH"></label>
   <div class="grid2"><label class="f">ID card number<input id="cvIdNo" maxlength="40" value="${esc(s && s.idNo)}" placeholder="e.g. CIV 228370"></label>
   <label class="f">Section<select id="cvSec">${cvSecOptions(sec)}</select></label></div>
-  <label class="f">Mobile<input id="cvPhone" maxlength="30" inputmode="tel" value="${esc(s && s.phone)}"></label>
+  <div class="grid2"><label class="f">Mobile<input id="cvPhone" maxlength="30" inputmode="tel" value="${esc(s && s.phone)}"></label>
+  <label class="f">Email<input id="cvEmail" type="email" maxlength="120" autocapitalize="none" value="${esc(s && s.email)}" placeholder="name@un.org"></label></div>
   <label class="f">ID card picture<input type="file" id="cvFile" accept="image/*" class="inp"></label>
   <div class="row" style="align-items:flex-start"><div class="cvprev" id="cvPrev">${img ? `<img alt="" src="${img}">` : 'No picture yet'}</div>
   <button class="btn sm" type="button" data-act="cvRotate">Turn picture ↻</button></div>
@@ -1047,7 +1051,9 @@ async function cvRotate(){ const src = cvPending || (cvEditing && S.cvCards[cvEd
   $('#cvPrev').innerHTML = `<img alt="" src="${cvPending}">`; $('#cvFormMsg').textContent = ''; toast('Picture turned. Press Save to keep it.'); }
 async function cvSave(){ const name = val('cvName'); if (!name) { $('#cvFormMsg').textContent = "Type the staff member's name."; return; }
   const btn = $('#cvSave'); btn.disabled = true; btn.textContent = 'Saving…';
-  const body = {name, idNo: val('cvIdNo'), section: val('cvSec'), phone: val('cvPhone')};
+  const email = val('cvEmail').toLowerCase();
+  if (email && !/^[^\s@;,]+@[^\s@;,]+\.[^\s@;,]+$/.test(email)) { $('#cvFormMsg').textContent = 'That email does not look right, for example name@un.org'; btn.disabled = false; btn.textContent = 'Save'; return; }
+  const body = {name, idNo: val('cvIdNo'), section: val('cvSec'), phone: val('cvPhone'), email};
   try {
     const key = cvEditing ? cvEditing.key : cvKey(cvNext());
     if (cvPending) { await db.collection('convoyCards').doc(key).set({img: cvPending}); body.hasImg = true; }
@@ -1081,7 +1087,7 @@ function iscrRow(T){ const sv = daySnapshot(T), ld = iscrLeader(T, sv);
   if (!iscrForm) return `<div class="iscr"><b>Security clearance</b><span class="small muted" style="flex:1;min-width:180px">Load your ISCR Excel form once. It is then filled for every convoy.</span><label class="btn sm primary">Load ISCR form<input type="file" id="iscrFile" accept=".xlsx" hidden></label></div>`;
   return `<div class="iscr"><b>Security clearance · ${esc(TRIP[T].name)}</b><span class="spacer"></span>
     <label class="small muted">Team leader <select id="iscrLeader" ${cvEditable() ? '' : 'disabled'}>${sv.staff.map(s => `<option value="${esc(s.key)}" ${ld && ld.key === s.key ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></label>
-    <button class="btn sm" data-act="iscr" data-v="xlsx">Excel</button><button class="btn sm" data-act="iscr" data-v="pdf">PDF</button>
+    <button class="btn sm" data-act="iscr" data-v="xlsx">Excel</button><button class="btn sm" data-act="iscr" data-v="pdf">PDF</button><button class="btn sm" data-act="cvEmails">Copy emails</button>
     <label class="btn sm ghost" title="Load a new version of the form">Replace form<input type="file" id="iscrFile" accept=".xlsx" hidden></label></div>`; }
 async function iscrLoad(file){ if (!/\.xlsx$/i.test(file.name) || file.size > 700000) { toast('Choose the ISCR Excel file (.xlsx)'); return; }
   const b64 = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = no; r.readAsDataURL(file); });
@@ -1206,6 +1212,10 @@ document.addEventListener('click', e => {
   if (a === 'cvLoginSheet') openSheet(cvLoginSheet(), null, 'logins');
   if (a === 'cvLogins') cvLoginsSync(true);
   if (a === 'iscr') iscrOut(t.dataset.v);
+  if (a === 'cvEmails') { const sv = daySnapshot(cvT()), all = sv.staff.map(x => S.cvStaff.find(s => s.key === x.key) || x);
+    const mails = all.map(s => s.email).filter(Boolean), miss = all.filter(s => !s.email).map(s => s.name);
+    if (!mails.length) toast('Nobody on this trip has an email yet. Add it with Edit on their card.', true);
+    else copyText(mails.join('; '), mails.length + ' email' + (mails.length > 1 ? 's' : '') + ' copied' + (miss.length ? '. No email for: ' + miss.join(', ') : ''), !!miss.length); }
   if (a === 'regOpen') regOpen();
   if (a === 'regCopy') regCopy();
   if (a === 'regList') openSheet(regListSheet(), null, 'convoy');
