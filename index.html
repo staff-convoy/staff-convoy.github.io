@@ -193,6 +193,9 @@ label.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-
 .calhead b{flex:1;text-align:center;font:800 16px/1.2 var(--f-label);letter-spacing:.04em;text-transform:uppercase}
 .cvconv{font:800 16px/1.2 var(--f-label);letter-spacing:.04em;color:var(--accent);text-transform:uppercase;margin-right:6px}
 .st{font-size:13px} .st.ok{color:var(--ok)} .st.no{color:var(--muted)}
+.iscr{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-top:10px;border-top:1px solid var(--line)}
+.iscr b{font:800 13px/1.2 var(--f-label);letter-spacing:.06em;color:var(--accent)}
+.iscr select{padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:14px;max-width:240px}
 .regbox{border:2px solid var(--accent);border-radius:12px;padding:12px 14px;background:rgba(255,210,31,.08)}
 .regbox>b,.regbox .row>b{color:var(--accent);font:800 15px/1.2 var(--f-label);letter-spacing:.04em}
 .reglink{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px 6px 6px 12px}
@@ -228,7 +231,7 @@ label.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-
   <div class="wrap">
     <div class="brand">
       <div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
-      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v32</div></div>
+      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v33</div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -319,7 +322,7 @@ function listen(){
     unsubs.push(db.collection('convoyLogins').doc(S.login).onSnapshot(d => { S.profile = d.exists ? d.data() : null; S.profileLoaded = true; render(); },
       e => { console.warn(e); S.profileLoaded = true; render(); })); }
   if (S.owner) {
-    unsubs.push(db.collection('convoyStaff').orderBy('no').onSnapshot(s => { S.cvStaff = s.docs.map(d => ({key:d.id, ...d.data()})); S.cvLoaded = true; cvSecMigrate(); cvLoginsSync(false); cvApplyRegs(); render(); }, e => { console.warn(e); S.cvLoaded = true; S.cvDenied = e.code === 'permission-denied'; render(); }));
+    unsubs.push(db.collection('convoyStaff').orderBy('no').onSnapshot(s => { S.cvStaff = s.docs.filter(d => typeof d.data().no === 'number').map(d => ({key:d.id, ...d.data()})); S.cvLoaded = true; cvSecMigrate(); cvLoginsSync(false); cvApplyRegs(); render(); }, e => { console.warn(e); S.cvLoaded = true; S.cvDenied = e.code === 'permission-denied'; render(); }));
     cvListenInfo(); cvListenRegs(); cvListenLogins();
   }
 }
@@ -335,7 +338,7 @@ function cvListenInfo(){
         else if (d.id === 'current') S.cv = {date: x.date || '', direction: x.direction || ''};
         else if (d.id === 'sections') S.cvSecs = x.list || null;
         else if (x.kind === 'conv') convs[x.date] = x;
-        else if (x.kind === 'day') put(x.date, x.dir, {src: 'day', people: x.people || {}, drivers: x.drivers || {}, staff: x.staff, vehicles: x.vehicles});
+        else if (x.kind === 'day') put(x.date, x.dir, {src: 'day', people: x.people || {}, drivers: x.drivers || {}, leader: x.leader || '', staff: x.staff, vehicles: x.vehicles});
         else if (x.kind === 'saved') { const people = {}, drivers = {}; (x.staff || []).forEach(p => people[p.key] = p.plate || ''); (x.vehicles || []).forEach(v => { if (v.driver) drivers[v.plate] = v.driver; });
           put(x.date, x.dir, {src: 'saved', people, drivers, staff: x.staff, vehicles: x.vehicles}); }
         else if (d.id === 'tripTO' || d.id === 'tripFROM') put(x.date, d.id.slice(4), {src: 'trip', people: x.people || {}, drivers: x.drivers || {}}); });
@@ -715,7 +718,7 @@ function tripSet(T, patch){ if (!cvEditable()) return Promise.resolve();
   const ref = db.collection('convoyInfo').doc('day_' + date + '_' + T);
   if (!Object.keys(d[T].people).length && !Object.keys(d[T].drivers).length) {
     delete d[T]; return Promise.all([ref.delete(), db.collection('convoyInfo').doc('saved_' + date + '_' + T).delete()]).catch(failed); }
-  return ref.set({kind: 'day', date, dir: T, people: d[T].people, drivers: d[T].drivers, staff: snap.staff, vehicles: snap.vehicles, savedAt: Date.now()}).catch(failed); }
+  return ref.set({kind: 'day', date, dir: T, people: d[T].people, drivers: d[T].drivers, leader: d[T].leader || '', staff: snap.staff, vehicles: snap.vehicles, savedAt: Date.now()}).catch(failed); }
 function cvTick(key, on){ const T = cvT(), people = {...tripOf(T).people}; if (on) people[key] = people[key] || ''; else delete people[key]; tripSet(T, {people}); }
 function cvPick(key, plate){ const T = cvT(); tripSet(T, {people: {...tripOf(T).people, [key]: plate}}); }
 
@@ -943,6 +946,7 @@ function convoyView(){
     <div class="small muted">${TRIP[T].route} · escorted by the Irish contingent.${ed ? ' Tick who travels and put them in a car.' : ''}</div>
     ${ed ? `<div class="stack" style="gap:6px"><h3 style="margin:0">Vehicles on this trip</h3>${cvCarsRow()}</div>` : pastView(T)}
     <div class="row">${convoyNo(S.cvDate) ? `<b class="cvconv">Convoy No. ${convoyNo(S.cvDate)}</b>` : ''}<span style="font-family:var(--f-mono)"><b>${on}</b>${S.viewer ? '' : ' of ' + list.length} staff</span><span class="spacer"></span>${on ? `<button class="btn sm" data-act="cvPdf" data-v="view">View PDF</button><button class="btn sm" data-act="cvPdf" data-v="pdf">Download PDF</button><button class="btn sm" data-act="cvPdf" data-v="docx">Word</button>` : ''}</div>
+    ${S.owner && on ? iscrRow(T) : ''}
   </div>
   ${ed ? `<div class="row"><input class="inp" id="cvQ" placeholder="Search name, ID or number" value="${esc(S.cvQuery)}" style="flex:1;min-width:180px">
     <div class="seg"><button data-act="cvShow" data-v="all" aria-pressed="${!S.cvOnly}">All</button><button data-act="cvShow" data-v="on" aria-pressed="${S.cvOnly}">On this trip</button></div></div>
@@ -1066,6 +1070,42 @@ async function cvImport(file){ cvSecDone = true;
     if (data.convoy && !S.cv.date && !S.cv.direction) await db.collection('convoyInfo').doc('current').set({date: data.convoy.date || '', direction: data.convoy.direction || ''});
     toast(todo.length + ' staff loaded');
   } catch (e) { failed(e); } }
+/* --- Security clearance (ISCR): the supervisor's own Excel form, filled for each trip --- */
+const ISCR_DOC = () => db.collection('convoyStaff').doc('zz_iscr_form'); // kept with the private staff list; it has no number, so it never shows as a person
+const ISCR_TRIP = {TO: {etd: '08:00', from: 'UNP 5-20', to: 'NAQOURA'}, FROM: {etd: '12:00', from: 'NAQOURA', to: 'UNP 5-20'}};
+let iscrForm; // undefined: not checked yet, '': not loaded yet, else the form as base64
+async function iscrTemplate(){ if (iscrForm === undefined) { try { const d = await ISCR_DOC().get(); iscrForm = d.exists && d.data().xlsx || ''; } catch (e) { console.warn(e); iscrForm = ''; } render(); } return iscrForm; }
+const iscrLeader = (T, sv) => { const k = tripOf(T).leader || (recOf(S.cvDate, T) || {}).leader; return sv.staff.find(s => s.key === k) || sv.staff[0]; };
+function iscrRow(T){ const sv = daySnapshot(T), ld = iscrLeader(T, sv);
+  if (iscrForm === undefined) { iscrTemplate(); return ''; }
+  if (!iscrForm) return `<div class="iscr"><b>Security clearance</b><span class="small muted" style="flex:1;min-width:180px">Load your ISCR Excel form once. It is then filled for every convoy.</span><label class="btn sm primary">Load ISCR form<input type="file" id="iscrFile" accept=".xlsx" hidden></label></div>`;
+  return `<div class="iscr"><b>Security clearance · ${esc(TRIP[T].name)}</b><span class="spacer"></span>
+    <label class="small muted">Team leader <select id="iscrLeader" ${cvEditable() ? '' : 'disabled'}>${sv.staff.map(s => `<option value="${esc(s.key)}" ${ld && ld.key === s.key ? 'selected' : ''}>${esc(s.name)}</option>`).join('')}</select></label>
+    <button class="btn sm" data-act="iscr" data-v="xlsx">Excel</button><button class="btn sm" data-act="iscr" data-v="pdf">PDF</button>
+    <label class="btn sm ghost" title="Load a new version of the form">Replace form<input type="file" id="iscrFile" accept=".xlsx" hidden></label></div>`; }
+async function iscrLoad(file){ if (!/\.xlsx$/i.test(file.name) || file.size > 700000) { toast('Choose the ISCR Excel file (.xlsx)'); return; }
+  const b64 = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = no; r.readAsDataURL(file); });
+  try { await ISCR_DOC().set({xlsx: b64, name: file.name, at: Date.now()}); iscrForm = b64; toast('ISCR form saved. It is filled for every convoy now.'); render(); } catch (e) { failed(e); } }
+const isoShift = (iso, n) => { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return isoDay(d); };
+function iscrData(T){ const sv = daySnapshot(T), ld = iscrLeader(T, sv), t = ISCR_TRIP[T];
+  return {requestDate: fmtD(isoShift(S.cvDate, -2)), missionDate: fmtD(S.cvDate), etd: t.etd, duration: '2 hours', depart: t.from, place: t.to,
+    when: fmtD(S.cvDate) + ' ' + t.etd, from: t.from, to: t.to, remarks: '', objective: T === 'TO' ? 'To NAQOURA' : 'From NAQOURA',
+    leader: ld ? ld.name + (ld.phone ? '   ' + ld.phone : '') : '', vehicles: (sv.vehicles || []).filter(v => v.count).map(v => v.plate).join(', '),
+    people: sv.staff.map(s => ({name: s.name, phone: s.phone || ''}))}; }
+async function iscrOut(kind){ const T = cvT(); if (S.cvBusy) return; S.cvBusy = true; toast('Preparing the security clearance…');
+  try { await cvLoadLibs(); await iscrLibs(); const b64 = await iscrTemplate(); if (!b64) throw new Error('Load the ISCR form first.');
+    const bin = atob(b64), bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const wb = new ExcelJS.Workbook(); await wb.xlsx.load(bytes.buffer); ISCR.fill(wb, iscrData(T));
+    const name = 'ISCR ' + S.cvDate.split('-').reverse().join('-') + ' - ' + (T === 'TO' ? 'to' : 'from') + ' Naqoura';
+    if (kind === 'xlsx') saveBlob(new Blob([await wb.xlsx.writeBuffer()], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), name + '.xlsx');
+    else saveBlob(ISCR.pdf(jspdf.jsPDF, wb, ISCR.logoOf(wb)).output('blob'), name + '.pdf');
+    toast('Downloaded ' + name + '.' + kind); }
+  catch (e) { console.warn(e); toast('Could not create the security clearance. ' + (e && e.message || '')); }
+  finally { S.cvBusy = false; } }
+let iscrLib = null;
+function iscrLibs(){ return iscrLib || (iscrLib = ['convoy/exceljs.min.js', 'convoy/iscr.js'].reduce((p, src) => p.then(() => new Promise((ok, no) => {
+  const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = () => { iscrLib = null; no(new Error('The Excel tools did not load.')); }; document.head.appendChild(sc); })), Promise.resolve())); }
+
 let cvLibs = null;
 function cvLoadLibs(){ return cvLibs || (cvLibs = ['convoy/docx.umd.js', 'convoy/jspdf.umd.min.js', 'convoy/gen.js'].reduce((p, src) => p.then(() => new Promise((ok, no) => {
   const sc = document.createElement('script'); sc.src = src; sc.onload = ok; sc.onerror = () => { cvLibs = null; no(new Error('The Word/PDF tools did not load. Check that the convoy folder was uploaded with the site.')); }; document.head.appendChild(sc); })), Promise.resolve())); }
@@ -1165,6 +1205,7 @@ document.addEventListener('click', e => {
   if (a === 'cvCal') { S.cvCal = !S.cvCal; render(); }
   if (a === 'cvLoginSheet') openSheet(cvLoginSheet(), null, 'logins');
   if (a === 'cvLogins') cvLoginsSync(true);
+  if (a === 'iscr') iscrOut(t.dataset.v);
   if (a === 'regOpen') regOpen();
   if (a === 'regCopy') regCopy();
   if (a === 'regList') openSheet(regListSheet(), null, 'convoy');
@@ -1196,6 +1237,8 @@ document.addEventListener('change', e => {
   if (t.dataset.cvtick) { cvTick(t.dataset.cvtick, t.checked); return; }
   if (t.id === 'cvSec' && t.value === '__new') { const sel = t; cvNewSection().then(n => { sel.innerHTML = cvSecOptions(n || (cvEditing ? secOf(cvEditing) : 'ELECT.UNIT')); }); return; }
   if (t.dataset.cvcar) { cvPick(t.dataset.cvcar, t.value); return; }
+  if (t.id === 'iscrFile') { const f = t.files && t.files[0]; t.value = ''; if (f) iscrLoad(f); return; }
+  if (t.id === 'iscrLeader') { tripSet(cvT(), {leader: t.value}); return; }
   if (t.id === 'cvImport') { const f = t.files && t.files[0]; t.value = ''; if (f) cvImport(f); return; }
   if (t.id === 'cvFile') { const f = t.files && t.files[0]; t.value = ''; if (f) cvNormalise(f).then(d => { cvPending = d; $('#cvPrev').innerHTML = `<img alt="" src="${d}">`; $('#cvFormMsg').textContent = ''; })
       .catch(() => { $('#cvFormMsg').textContent = 'That file could not be read as a picture. Choose a JPG or PNG photo of the card.'; }); return; }
