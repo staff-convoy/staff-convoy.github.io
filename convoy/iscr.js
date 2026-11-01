@@ -43,7 +43,7 @@
       row.getCell(2).value = p ? p.name : null;
       row.getCell(5).value = p ? "UNIFIL" : null;
       row.getCell(6).value = p ? p.phone || "" : null;
-      row.getCell(7).value = p ? p.callsign || "" : null; row.getCell(9).value = null;
+      row.getCell(7).value = p ? p.callsign || "" : null; row.getCell(9).value = p ? p.plate || "" : null;
     }
     var last = LAST + extra;
     ws.pageSetup.printArea = "A1:I" + last;
