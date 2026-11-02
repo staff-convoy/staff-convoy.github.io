@@ -259,7 +259,7 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
   <div class="wrap">
     <div class="brand">
       <div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
-      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v38</div></div>
+      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v39</div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -954,9 +954,11 @@ function cvSecOptions(cur){ const l = cvSecList();
   return l.map(x => `<option value="${esc(x)}" ${lc(x) === lc(cur) ? 'selected' : ''}>${esc(x)}</option>`).join('') + `<option value="__new">+ New section…</option>`; }
 function cvSecRow(){ const T = cvT(), used = cvSecList().filter(x => S.cvStaff.some(s => lc(secOf(s)) === lc(x)));
   if (S.cvStaff.some(s => secOf(s) === 'No section')) used.push('No section');
-  return `<div class="secs"><button class="car" data-act="cvSec" data-v="" aria-pressed="${!S.cvSec}">All sections</button>${used.map(x => {
+  // the units list stays closed until "Units" is pressed
+  return `<div class="secs"><button class="car" data-act="cvSec" data-v="" aria-pressed="${!S.cvSec}">All sections</button><button class="car" data-act="cvUnits" aria-expanded="${!!S.cvUnits}" aria-pressed="${!!S.cvSec}">${S.cvSec ? 'Units: ' + esc(S.cvSec) : 'Units'} ${S.cvUnits ? '▴' : '▾'}</button></div>
+  ${S.cvUnits ? `<div class="secs">${used.map(x => {
     const n = S.cvStaff.filter(s => lc(secOf(s)) === lc(x) && onTrip(T, s.key)).length;
-    return `<button class="car" data-act="cvSec" data-v="${esc(x)}" aria-pressed="${lc(S.cvSec) === lc(x)}">${esc(x)} <b>${n}</b></button>`; }).join('')}</div>`; }
+    return `<button class="car" data-act="cvSec" data-v="${esc(x)}" aria-pressed="${lc(S.cvSec) === lc(x)}">${esc(x)} <b>${n}</b></button>`; }).join('')}</div>` : ''}`; }
 function cvVisible(s){ if (S.cvOnly && !onTrip(cvT(), s.key)) return false; if (S.cvSec && lc(secOf(s)) !== lc(S.cvSec)) return false; const q = S.cvQuery.trim().toLowerCase();
   return !q || [s.no, s.name, s.idNo, s.phone, s.section, s.email].join(' ').toLowerCase().includes(q); }
 function cvCard(s){ const img = S.cvCards[s.key], T = cvT(), on = onTrip(T, s.key);
@@ -1268,7 +1270,8 @@ document.addEventListener('click', e => {
   if (a === 'restore') db.collection('team').doc(t.dataset.e).update({active: true}).catch(failed);
   if (a === 'cvTrip') { S.cvTrip = t.dataset.v; remember('eu.cvTrip', S.cvTrip); render(); }
   if (a === 'cvShow') { S.cvOnly = t.dataset.v === 'on'; render(); }
-  if (a === 'cvSec') { S.cvSec = t.dataset.v; render(); }
+  if (a === 'cvSec') { S.cvSec = t.dataset.v; S.cvUnits = false; render(); }
+  if (a === 'cvUnits') { S.cvUnits = !S.cvUnits; render(); }
   if (a === 'cvAll') { const T = cvT(), people = {...tripOf(T).people}, on = t.dataset.v === '1';
     S.cvStaff.filter(s => !S.cvSec || lc(secOf(s)) === lc(S.cvSec)).forEach(s => { if (on) people[s.key] = carOf(T, s.key); else delete people[s.key]; }); tripSet(T, {people}); }
   if (a === 'cvAdd') openSheet(cvForm(null), null, 'convoy');
