@@ -148,7 +148,7 @@
         children: [
           para([run("CRITICAL STAFF \u2013 WEEKLY CONVOY MOVEMENT", { size: 17, bold: true, color: BLUE })], { align: D.AlignmentType.CENTER, after: 2 }),
           para([run(R.label + ":  ", { size: 12, bold: true, color: BLUE }), run(R.route.replace(">", "\u25b8"), { size: 12, color: BLUE })], { align: D.AlignmentType.CENTER, after: 1 }),
-          para([run("Escort: Irish Contingent (IRISHBATT)", { size: 10, color: "404040" })], { align: D.AlignmentType.CENTER, after: 2 }),
+          para([run("Escort: " + (info.escort || "Irish Contingent (IRISHBATT)"), { size: 10, color: "404040" })], { align: D.AlignmentType.CENTER, after: 2 }),
           para([run("Date:  ", { size: 12, bold: true, color: BLUE }), run(displayDate(info.date), { size: 12 }),
                 run("        Staff on duty: " + staff.length, { size: 11, color: "404040" })], { align: D.AlignmentType.CENTER, after: vehicleItems(info).length ? 1 : 6 }),
           vehicleItems(info).length ? para([run("Vehicles:  ", { size: 9, bold: true, color: BLUE }), run(vehicleItems(info).join("   \u00b7   "), { size: 9, color: "202020" })], { align: D.AlignmentType.CENTER, after: 4 }) : null,
@@ -177,7 +177,7 @@
     pdf.setFontSize(12);
     pdf.text(R.label + ":  " + R.route, 105, 30, { align: "center" });
     pdf.setFont("helvetica", "normal"); pdf.setFontSize(9); pdf.setTextColor(64, 64, 64);
-    pdf.text("Escort: Irish Contingent (IRISHBATT)", 105, 35, { align: "center" });
+    pdf.text("Escort: " + (info.escort || "Irish Contingent (IRISHBATT)"), 105, 35, { align: "center" });
     pdf.setFontSize(11);
     pdf.setFont("helvetica", "bold"); pdf.setTextColor(31, 78, 121);
     var dateTxt = "Date:  ", dateVal = displayDate(info.date), cnt = "        Staff on duty: " + staff.length;

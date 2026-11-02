@@ -259,7 +259,7 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
   <div class="wrap">
     <div class="brand">
       <div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
-      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v39</div></div>
+      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v40</div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -305,7 +305,7 @@ const MARKS = [['P','Present'],['A','Absent'],['L','Leave'],['S','Sick'],['O','O
 
 const S = { user:null, email:'', owner:false, me:null, team:{}, attendance:{}, notes:[], loaded:false,
   tab: remember('eu.tab') || 'convoy', orders:[], support:[], orderFilter:'open', supportFilter:'pending', openSupportId:null, openOrder:null, month: ym(new Date()), noteFilter:'pending', sites:[], readings:{}, kMonth: ym(new Date()), kFind:'', authMode:'signin', authMsg:'',
-  cvStaff:[], cvLoaded:false, cvCards:{}, cv:{date:'', direction:''}, cvCars:[], cvTrip: remember('eu.cvTrip') || '', cvDays:{}, cvCal:false, cvDate: isoDay(new Date()), cvMonth: isoDay(new Date()).slice(0, 7), cvInfoLoaded:false, cvNotes:[], cvConvs:{}, cvRegs:{}, cvRegsLoaded:false, cvLogins:null, member:false, login:'', profile:null, profileLoaded:false, regDate: regHash(), stCards:{}, cvSecs:null, cvSec:'', cvOnly:false, cvQuery:'', cvBusy:false };
+  cvStaff:[], cvLoaded:false, cvCards:{}, cv:{date:'', direction:''}, cvCars:[], cvTrip: remember('eu.cvTrip') || '', cvDays:{}, cvCal:false, cvDate: isoDay(new Date()), cvMonth: isoDay(new Date()).slice(0, 7), cvInfoLoaded:false, cvNotes:[], cvMeta:{}, cvEscorts:null, cvConvs:{}, cvRegs:{}, cvRegsLoaded:false, cvLogins:null, member:false, login:'', profile:null, profileLoaded:false, regDate: regHash(), stCards:{}, cvSecs:null, cvSec:'', cvOnly:false, cvQuery:'', cvBusy:false };
 let cvCardsOn = false;
 
 if (!CFG.firebase || !CFG.firebase.apiKey) {
@@ -357,7 +357,7 @@ function listen(){
 function cvListenInfo(){
   {
     unsubs.push(db.collection('convoyInfo').onSnapshot(s => {
-      S.cvCars = []; const days = {}, convs = {}, notes = [], rank = {day: 3, saved: 2, trip: 1};
+      S.cvCars = []; const days = {}, convs = {}, notes = [], meta = {}, rank = {day: 3, saved: 2, trip: 1};
       // older records ("saved" trips and the two working trips) still show, a "day" record wins
       const put = (date, T, rec) => { if (!date || !TRIP[T]) return; const d = days[date] = days[date] || {};
         if (!d[T] || rank[rec.src] > rank[d[T].src]) d[T] = rec; };
@@ -366,12 +366,14 @@ function cvListenInfo(){
         else if (d.id === 'current') S.cv = {date: x.date || '', direction: x.direction || ''};
         else if (d.id === 'sections') S.cvSecs = x.list || null;
         else if (x.kind === 'conv') convs[x.date] = x;
+        else if (x.kind === 'meta') meta[x.date] = x;
+        else if (d.id === 'escorts') S.cvEscorts = x.list || null;
         else if (x.kind === 'cnote') notes.push({id: d.id, ...x});
         else if (x.kind === 'day') put(x.date, x.dir, {src: 'day', people: x.people || {}, drivers: x.drivers || {}, leader: x.leader || '', staff: x.staff, vehicles: x.vehicles});
         else if (x.kind === 'saved') { const people = {}, drivers = {}; (x.staff || []).forEach(p => people[p.key] = p.plate || ''); (x.vehicles || []).forEach(v => { if (v.driver) drivers[v.plate] = v.driver; });
           put(x.date, x.dir, {src: 'saved', people, drivers, staff: x.staff, vehicles: x.vehicles}); }
         else if (d.id === 'tripTO' || d.id === 'tripFROM') put(x.date, d.id.slice(4), {src: 'trip', people: x.people || {}, drivers: x.drivers || {}}); });
-      S.cvDays = days; S.cvConvs = convs; S.cvNotes = notes.sort((a, b) => b.at - a.at); S.cvInfoLoaded = true; cvApplyRegs(); render(); }, e => { console.warn(e); S.cvInfoLoaded = true; render(); }));
+      S.cvDays = days; S.cvConvs = convs; S.cvMeta = meta; S.cvNotes = notes.sort((a, b) => b.at - a.at); S.cvInfoLoaded = true; cvApplyRegs(); render(); }, e => { console.warn(e); S.cvInfoLoaded = true; render(); }));
   }
 }
 // ID card pictures are large, so they load only once the Convoy tab is opened
@@ -726,6 +728,20 @@ const fmtD = iso => iso ? iso.split('-').reverse().join('/') : '';
 const cvT = () => S.cvTrip === 'TO' || S.cvTrip === 'FROM' ? S.cvTrip : 'TO';
 const cvEditable = () => !S.viewer && S.cvDate >= isoDay(new Date()); // today and later can change; past dates are a record
 const recOf = (date, T) => (S.cvDays[date] || {})[T];
+// the escort can differ per convoy; IRISHBATT unless chosen
+const ESCORTS = ['IRISHBATT', 'GHANBATT', 'ITALBATT'];
+const ESCORT_NAME = {IRISHBATT: 'Irish contingent (IRISHBATT)', GHANBATT: 'Ghanaian contingent (GHANBATT)', ITALBATT: 'Italian contingent (ITALBATT)'};
+const escortOf = date => ((S.cvMeta || {})[date] || {}).escort || 'IRISHBATT';
+const escortName = date => ESCORT_NAME[escortOf(date)] || escortOf(date);
+const escortList = () => { const l = (S.cvEscorts || ESCORTS).slice(); Object.values(S.cvMeta || {}).forEach(m => { if (m.escort && !l.includes(m.escort)) l.push(m.escort); }); return l; };
+// a convoy exists once it was created, has a list, or has registration open
+const isConvoy = date => !!(S.cvMeta[date] || S.cvConvs[date] || hasList(date));
+const upcoming = () => [...new Set([...Object.keys(S.cvMeta), ...Object.keys(S.cvConvs), ...Object.keys(S.cvDays)])].filter(d => d >= isoDay(new Date()) && isConvoy(d)).sort();
+function cvSetEscort(date, escort){ S.cvMeta[date] = {...(S.cvMeta[date] || {}), kind: 'meta', date, escort}; render();
+  return db.collection('convoyInfo').doc('meta_' + date).set({kind: 'meta', date, escort}, {merge: true}).catch(failed); }
+async function cvNewEscort(){ const name = (prompt('Name of the escort (for example INDOBATT):') || '').trim().toUpperCase().replace(/\s+/g, ' ');
+  if (!name) return ''; const l = escortList(); if (!l.includes(name)) { l.push(name); S.cvEscorts = l; try { await db.collection('convoyInfo').doc('escorts').set({list: l}); } catch (e) { failed(e); } }
+  return name; }
 const hasTrip = T => !!recOf(S.cvDate, T);
 const tripOf = T => recOf(S.cvDate, T) || {people: {}, drivers: {}};
 // a person is on a trip when they have an entry in its "people" map; the value is the car plate ('' = no car yet)
@@ -896,7 +912,7 @@ function regView(){
   return `<div class="stack">${lost}${picker}
   <div class="card stack" style="gap:12px;border-color:var(--accent)">
     <div class="row"><h2 style="margin:0">Convoy ${DAYS[dt.getDay()]} ${fmtD(date)}</h2><span class="spacer"></span><span class="st ${open ? 'ok' : 'no'}">${open ? 'Registration open until ' + fmtWhen(c.closesAt) : 'Registration closed'}</span></div>
-    <div class="small muted">${esc(S.profile.name)} · ${esc(S.profile.idNo)} · escorted by the Irish contingent</div>
+    <div class="small muted">${esc(S.profile.name)} · ${esc(S.profile.idNo)} · escorted by the ${esc(escortName(date))}</div>
     ${body}</div>
   ${people}
   ${notesHtml}</div>`; }
@@ -919,7 +935,7 @@ function calView(){ const [y, m] = S.cvMonth.split('-').map(Number), first = new
   const lead = (first.getDay() + 6) % 7, cells = [];
   for (let i = 0; i < lead; i++) cells.push('<span></span>');
   for (let d = 1; d <= n; d++) { const iso = S.cvMonth + '-' + String(d).padStart(2, '0');
-    const wd = new Date(iso + 'T12:00').getDay(), conv = hasList(iso) || !!S.cvConvs[iso];
+    const wd = new Date(iso + 'T12:00').getDay(), conv = isConvoy(iso);
     const cls = [conv ? (iso < today ? 'done' : 'has') : '', iso < today ? 'past' : '', iso === today ? 'today' : '', iso === S.cvDate ? 'sel' : '', wd === 0 || wd === 6 ? 'we' : ''].join(' ');
     cells.push(`<button class="${cls}" data-act="cvDay" data-v="${iso}" aria-label="${d} ${MONTHS[m - 1]}${hasList(iso) ? ', convoy planned' : ''}">${d}</button>`); }
   return `<div class="card stack" style="gap:8px"><div class="calhead"><button class="btn sm" data-act="cvMonth" data-v="-1" aria-label="Previous month">‹</button><b>${MONTHS[m - 1]} ${y}</b><button class="btn sm" data-act="cvMonth" data-v="1" aria-label="Next month">›</button></div>
@@ -979,7 +995,8 @@ function cvOwnerView(){
     <div class="card stack" style="gap:8px"><p class="panelh">Selected convoy</p>
       <div style="font:800 18px/1.2 var(--f-label)">${DAYS[dt.getDay()]} ${fmtD(S.cvDate)}</div>
       <div class="row small">${no ? `<b class="cvconv" style="font-size:14px">Convoy No. ${no}</b>` : '<span class="muted">No list yet</span>'}<span class="spacer"></span><span class="st ${ed ? 'ok' : 'no'}">${ed ? '✓ Saves automatically' : 'Past: view only'}</span></div>
-      <div class="small">To Naqoura <b>${dayCount(S.cvDate, 'TO')}</b> · From Naqoura <b>${dayCount(S.cvDate, 'FROM')}</b></div></div>
+      <div class="small">To Naqoura <b>${dayCount(S.cvDate, 'TO')}</b> · From Naqoura <b>${dayCount(S.cvDate, 'FROM')}</b></div>
+      <label class="f" style="margin:0">Escort<select id="cvEscort" ${ed ? '' : 'disabled'}>${escortList().map(x => `<option ${x === escortOf(S.cvDate) ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__new">+ New escort…</option></select></label></div>
     ${ed ? regBox() : ''}
     <button class="btn" data-act="cvLoginSheet">Staff logins</button></aside>`;
   const right = `<aside class="cvright">
@@ -995,7 +1012,9 @@ function cvOwnerView(){
     <div class="card stack" style="gap:10px;border-color:var(--accent)">
       <div class="row"><h2 style="margin:0">${DAYS[dt.getDay()]} ${fmtD(S.cvDate)}</h2><span class="spacer"></span><span style="font-family:var(--f-mono)"><b>${on}</b> of ${list.length} staff</span></div>
       <div class="seg">${['TO','FROM'].map(X => `<button data-act="cvTrip" data-v="${X}" aria-pressed="${T === X}">${TRIP[X].name} · ${dayCount(S.cvDate, X)}</button>`).join('')}</div>
-      <div class="small muted">${TRIP[T].route} · escorted by the Irish contingent.${ed ? ' Tick who travels and put them in a car.' : ''}</div>
+      <div class="small muted">${TRIP[T].route} · escorted by the ${esc(escortName(S.cvDate))}.${ed ? ' Tick who travels and put them in a car.' : ''}</div>
+      ${upcoming().length ? `<div class="row small" style="gap:6px"><b class="panelh" style="font-size:12px">Upcoming convoys</b>${upcoming().map(d => { const dd = new Date(d + 'T12:00'), n = convoyNo(d);
+        return `<button class="car" data-act="cvDay" data-v="${d}" aria-pressed="${d === S.cvDate}">${DAYS[dd.getDay()].slice(0, 3)} ${fmtD(d).slice(0, 5)}${n ? ' · No. ' + n : ''} · ${esc(escortOf(d))}</button>`; }).join('')}</div>` : ''}
       ${ed ? '' : pastView(T)}</div>
     ${ed ? `<div class="row"><input class="inp" id="cvQ" placeholder="Search name, ID or number" value="${esc(S.cvQuery)}" style="flex:1;min-width:180px">
       <div class="seg"><button data-act="cvShow" data-v="all" aria-pressed="${!S.cvOnly}">All</button><button data-act="cvShow" data-v="on" aria-pressed="${S.cvOnly}">On this trip</button></div></div>
@@ -1018,7 +1037,7 @@ function convoyView(){
     <div class="row"><h2 style="margin:0">${DAYS[dt.getDay()]} ${fmtD(S.cvDate)}</h2><span class="spacer"></span><span class="st ${ed ? 'ok' : 'no'}">${ed ? '✓ Changes save automatically' : S.viewer ? 'View only' : 'Past date: view only'}</span></div>
     <div class="seg">${['TO','FROM'].map(X => `<button data-act="cvTrip" data-v="${X}" aria-pressed="${T === X}">${TRIP[X].name} · ${dayCount(S.cvDate, X)}</button>`).join('')}</div>
     ${ed && S.owner ? regBox() : ''}
-    <div class="small muted">${TRIP[T].route} · escorted by the Irish contingent.${ed ? ' Tick who travels and put them in a car.' : ''}</div>
+    <div class="small muted">${TRIP[T].route} · escorted by the ${esc(escortName(S.cvDate))}.${ed ? ' Tick who travels and put them in a car.' : ''}</div>
     ${ed ? `<div class="stack" style="gap:6px"><h3 style="margin:0">Vehicles on this trip</h3>${cvCarsRow()}</div>` : pastView(T)}
     <div class="row">${convoyNo(S.cvDate) ? `<b class="cvconv">Convoy No. ${convoyNo(S.cvDate)}</b>` : ''}<span style="font-family:var(--f-mono)"><b>${on}</b>${S.viewer ? '' : ' of ' + list.length} staff</span><span class="spacer"></span>${on ? `<button class="btn sm" data-act="cvPdf" data-v="view">View PDF</button><button class="btn sm" data-act="cvPdf" data-v="pdf">Download PDF</button><button class="btn sm" data-act="cvPdf" data-v="docx">Word</button>` : ''}</div>
     ${S.owner && on ? iscrRow(T) : ''}
@@ -1167,7 +1186,7 @@ async function iscrLoad(file){ if (!/\.xlsx$/i.test(file.name) || file.size > 70
 const isoShift = (iso, n) => { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return isoDay(d); };
 function iscrData(T){ const sv = daySnapshot(T), ld = iscrLeader(T, sv), t = ISCR_TRIP[T];
   return {requestDate: fmtD(isoShift(S.cvDate, -2)), missionDate: fmtD(S.cvDate), etd: t.etd, duration: '2 hours', depart: t.from, place: t.to,
-    when: fmtD(S.cvDate) + ' ' + t.etd, from: t.from, to: t.to, remarks: '', objective: T === 'TO' ? 'To NAQOURA' : 'From NAQOURA',
+    when: fmtD(S.cvDate) + ' ' + t.etd, from: t.from, to: t.to, escort: escortOf(S.cvDate), remarks: '', objective: T === 'TO' ? 'To NAQOURA' : 'From NAQOURA',
     leader: ld ? ld.name + (ld.phone ? '   ' + ld.phone : '') : '', vehicles: (sv.vehicles || []).filter(v => v.count).map(v => v.plate).join(', '),
     people: sv.staff.map(s => ({name: s.name, phone: s.phone || '', callsign: s.idNo || '', plate: s.plate || ''}))}; }
 async function iscrOut(kind){ const T = cvT(); if (S.cvBusy) return; S.cvBusy = true; toast('Preparing the security clearance…');
@@ -1196,7 +1215,7 @@ async function cvCardImage(key){ let src = S.cvCards[key];
 function saveBlob(blob, name){ const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); }
 async function cvBuild(sv, kind){ await cvLoadLibs(); const list = [];
   for (const s of sv.staff) { let img = null; try { img = await cvCardImage(s.key); } catch (e) {} list.push({...s, img}); }
-  const info = {date: sv.date, direction: sv.dir, vehicles: sv.vehicles || []};
+  const info = {date: sv.date, direction: sv.dir, vehicles: sv.vehicles || [], escort: escortName(sv.date)};
   const blob = kind === 'docx' ? await docx.Packer.toBlob(ConvoyGen.buildDocx(docx, info, list)) : ConvoyGen.buildPdf(jspdf.jsPDF, info, list).output('blob');
   return {blob, name: ConvoyGen.fileBase(info) + '.' + kind}; }
 async function cvOut(kind, view){ const sv = daySnapshot(cvT()); if (!sv.staff.length || S.cvBusy) return;
@@ -1303,7 +1322,7 @@ document.addEventListener('click', e => {
   if (a === 'cvDay') { const d = t.dataset.v;
     if (S.cvPick && d < isoDay(new Date())) { toast('Choose today or a later date for a new convoy'); return; }
     S.cvDate = d; S.cvMonth = d.slice(0, 7);
-    if (S.cvPick) { S.cvPick = false; render(); toast('Convoy ' + fmtD(d) + ': open registration, then tick the staff'); const el = document.querySelector('#regClose'); if (el) el.closest('.regbox').scrollIntoView({block: 'nearest', behavior: 'smooth'}); return; }
+    if (S.cvPick) { S.cvPick = false; if (!S.cvMeta[d]) cvSetEscort(d, 'IRISHBATT'); render(); toast('Convoy ' + fmtD(d) + ': open registration, then tick the staff'); const el = document.querySelector('#regClose'); if (el) el.closest('.regbox').scrollIntoView({block: 'nearest', behavior: 'smooth'}); return; }
     render(); }
   if (a === 'cvMonth') { const [y, m] = S.cvMonth.split('-').map(Number); S.cvMonth = isoDay(new Date(y, m - 1 + Number(t.dataset.v), 1)).slice(0, 7); render(); }
   if (a === 'cvCar') openSheet(cvCarSheet(t.dataset.plate), null, 'convoy');
@@ -1325,6 +1344,7 @@ document.addEventListener('change', e => {
   if (t.dataset.cvtick) { cvTick(t.dataset.cvtick, t.checked); return; }
   if (t.id === 'cvSec' && t.value === '__new') { const sel = t; cvNewSection().then(n => { sel.innerHTML = cvSecOptions(n || (cvEditing ? secOf(cvEditing) : 'ELECT.UNIT')); }); return; }
   if (t.dataset.cvcar) { cvPick(t.dataset.cvcar, t.value); return; }
+  if (t.id === 'cvEscort') { const date = S.cvDate; if (t.value === '__new') cvNewEscort().then(n => n ? cvSetEscort(date, n) : render()); else cvSetEscort(date, t.value); return; }
   if (t.id === 'iscrFile') { const f = t.files && t.files[0]; t.value = ''; if (f) iscrLoad(f); return; }
   if (t.id === 'iscrLeader') { tripSet(cvT(), {leader: t.value}); return; }
   if (t.id === 'cvImport') { const f = t.files && t.files[0]; t.value = ''; if (f) cvImport(f); return; }

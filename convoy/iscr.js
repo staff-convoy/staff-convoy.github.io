@@ -31,6 +31,10 @@
     put("B14", d.when); put("C14", d.from); put("F14", d.to); put("H14", d.remarks || "");
     put("B16", "Rotation of Critical Staff : " + (d.objective || ""));
     put("B18", d.leader || ""); put("F18", d.vehicles || "");
+    // "Military Escort ...: IRISHBATT Escort" -> the escort of this convoy, keeping the form's own styling
+    if (d.escort) { var ec = ws.getCell("B27"), ev = ec.value, swap = function (t) { return String(t).replace(/[A-Z]+BATT|IRISH\w*/, d.escort); };
+      if (ev && ev.richText) ec.value = {richText: ev.richText.map(function (r) { return {font: r.font, text: swap(r.text)}; })};
+      else if (typeof ev === "string") ec.value = swap(ev); }
     // more people than rows: open new rows that look like the first participant row
     shiftDown(ws, FIRST + ROWS, extra);
     var model = ws.getRow(FIRST);
