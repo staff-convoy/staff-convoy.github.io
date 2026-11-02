@@ -182,6 +182,34 @@ label.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-
 .inlist li{display:flex;gap:10px;align-items:center;padding:8px 10px;background:var(--sunk);border-radius:10px}
 .inlist li .cvno{font-size:17px;min-width:26px}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+/* full-width page for the supervisor: calendar and new convoy | staff | vehicles and documents */
+body.full .wrap{max-width:1680px;padding-inline:20px}
+.cvlayout{display:grid;grid-template-columns:290px minmax(0,1fr) 300px;grid-template-areas:"left main right";gap:18px;align-items:start}
+.cvleft{grid-area:left}.cvmain{grid-area:main;min-width:0}.cvright{grid-area:right}
+.cvleft,.cvright{position:sticky;top:112px;max-height:calc(100vh - 124px);overflow:auto;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin}
+.panelh{font:800 13px/1.2 var(--f-label);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin:0}
+.cvleft .cal{gap:3px}.cvleft .cal button{max-height:34px;font-size:13px;border-radius:6px}
+.cvleft .cal .wd{font-size:10px}
+.cal button.we{background:rgba(0,0,0,.28)}
+.cal button.done{border:2px solid var(--accent);color:var(--accent);font-weight:800;background:none}
+.cal button.done.we{background:rgba(0,0,0,.28)}
+.cal button.has.we{background:var(--accent)}
+.calkey{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--muted)}
+.calkey i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.picking{outline:2px dashed var(--accent);outline-offset:4px}
+.btn.block{width:100%}
+.carlist{display:flex;flex-direction:column;gap:6px}
+.carlist .car{width:100%;justify-content:space-between;border-radius:10px;padding:8px 12px;text-align:left}
+.carlist .car span{font-weight:500;font-size:12px;color:var(--muted)}
+.docs{display:flex;flex-wrap:wrap;gap:6px}
+.cvright .iscr{border-top:0;padding-top:0}
+.cvright .iscr select{max-width:100%;width:100%}
+.cvright .iscr label.small{width:100%}
+.cvmain .cvgrid{grid-template-columns:repeat(auto-fill,minmax(240px,1fr))}
+.cvleft .reglink{flex-direction:column;align-items:stretch;padding:8px}.cvleft .reglink code{font-size:12px}
+@media (max-width:1250px){.cvlayout{grid-template-columns:280px minmax(0,1fr);grid-template-areas:"left main" "right main"}
+  .cvleft,.cvright{position:static;max-height:none;overflow:visible}}
+@media (max-width:820px){.cvlayout{grid-template-columns:minmax(0,1fr);grid-template-areas:"left" "right" "main"}}
 .cal .wd{font:700 11px/1.2 var(--f-label);letter-spacing:.06em;color:var(--muted);text-transform:uppercase;padding:2px 0 4px}
 .cal button{aspect-ratio:1;max-height:48px;width:100%;border:1px solid transparent;border-radius:8px;background:none;color:var(--ink);font:600 15px/1 var(--f-body);cursor:pointer;padding:0}
 .cal button:hover{border-color:var(--muted)}
@@ -231,7 +259,7 @@ label.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-
   <div class="wrap">
     <div class="brand">
       <div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
-      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v37</div></div>
+      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v38</div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -388,11 +416,11 @@ function render(){
   document.title = 'Critical Staff';
   if (typing()) { pending = true; return; }
   const ok = S.user && (S.user.emailVerified || S.viewer || S.member) && S.loaded && allowed();
-  $('#me').innerHTML = S.user ? `<div>${esc(S.owner ? 'Supervisor' : S.viewer ? 'Staff · view only' : S.member ? (S.profile && S.profile.name) || S.login.toUpperCase() : (S.me && S.me.name) || S.email)}</div><button data-act="signout">Sign out</button>` : '';
+  $('#me').innerHTML = S.user ? `<div>${esc(S.owner ? 'Elias FARAH · Admin' : S.viewer ? 'Staff · view only' : S.member ? (S.profile && S.profile.name) || S.login.toUpperCase() : (S.me && S.me.name) || S.email)}</div><button data-act="signout">Sign out</button>` : '';
   const tabs = S.viewer || S.member ? TABS.filter(([k]) => k === 'convoy') : TABS.filter(([k]) => !OWNER_TABS.includes(k) || S.owner);
   if (S.user && S.loaded && !tabs.some(([k]) => k === S.tab)) S.tab = tabs[0][0];
   $('#tabs').innerHTML = ok && !S.member ? tabs.map(([k,l]) => `<button class="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${k==='orders'&&newCount()?`<span class="dot">${newCount()}</span>`:''}${k==='support'&&openSupport().length?`<span class="dot red">${openSupport().length}</span>`:''}</button>`).join('') : '';
-  const v = $('#view'); v.classList.toggle('wide', S.tab === 'attendance'); const sx = v.querySelector('.scrollx')?.scrollLeft;
+  const v = $('#view'); v.classList.toggle('wide', S.tab === 'attendance'); document.body.classList.toggle('full', !!(S.owner && S.tab === 'convoy')); const sx = v.querySelector('.scrollx')?.scrollLeft;
   if (!S.user) v.innerHTML = authView();
   else if (!S.user.emailVerified && !S.viewer && !S.member) v.innerHTML = verifyView();
   else if (!S.loaded) v.innerHTML = `<div class="empty"><b>Loading</b>Checking your access.</div>`;
@@ -739,7 +767,7 @@ const regOpenNow = c => !!c && c.closesAt > Date.now() && c.date >= isoDay(new D
 function regMessage(date){ const c = S.cvConvs[date], dt = new Date(date + 'T12:00');
   return `Convoy ${DAYS[dt.getDay()]} ${fmtD(date)} (To / From Naqoura)\nRegister before ${fmtWhen(c.closesAt)}:\n${regLink(date)}\n\nUser: your ID number (example CIV228370)\nPassword: the numbers of your ID (example 228370)`; }
 function regBox(){ const date = S.cvDate, c = S.cvConvs[date];
-  if (!c) return `<div class="regbox stack" style="gap:8px"><b>Staff registration</b><span class="small">Let staff register themselves for this convoy. Choose when registration closes, then send the link in the WhatsApp group.</span>
+  if (!c) return `<div class="regbox stack" style="gap:8px"><b>Staff registration</b><span class="small">Choose when registration closes, open it, then copy the link for the WhatsApp group.</span>
     <div class="row"><label class="f" style="flex:1;min-width:210px">Registration closes<input type="datetime-local" id="regClose" value="${localInput(defClose(date))}"></label><button class="btn primary" data-act="regOpen">Open registration</button></div></div>`;
   const regs = regsFor(date), open = regOpenNow(c), n = T => regs.filter(r => r.dir === T).length, dr = regs.filter(r => r.canDrive).length;
   return `<div class="regbox stack" style="gap:8px"><div class="row"><b>Staff registration</b><span class="spacer"></span><span class="st ${open ? 'ok' : 'no'}">${open ? 'Open until ' + fmtWhen(c.closesAt) : 'Closed · ' + fmtWhen(c.closesAt)}</span></div>
@@ -891,11 +919,12 @@ function calView(){ const [y, m] = S.cvMonth.split('-').map(Number), first = new
   const lead = (first.getDay() + 6) % 7, cells = [];
   for (let i = 0; i < lead; i++) cells.push('<span></span>');
   for (let d = 1; d <= n; d++) { const iso = S.cvMonth + '-' + String(d).padStart(2, '0');
-    const cls = [hasList(iso) ? 'has' : '', iso < today ? 'past' : '', iso === today ? 'today' : '', iso === S.cvDate ? 'sel' : ''].join(' ');
+    const wd = new Date(iso + 'T12:00').getDay(), conv = hasList(iso) || !!S.cvConvs[iso];
+    const cls = [conv ? (iso < today ? 'done' : 'has') : '', iso < today ? 'past' : '', iso === today ? 'today' : '', iso === S.cvDate ? 'sel' : '', wd === 0 || wd === 6 ? 'we' : ''].join(' ');
     cells.push(`<button class="${cls}" data-act="cvDay" data-v="${iso}" aria-label="${d} ${MONTHS[m - 1]}${hasList(iso) ? ', convoy planned' : ''}">${d}</button>`); }
   return `<div class="card stack" style="gap:8px"><div class="calhead"><button class="btn sm" data-act="cvMonth" data-v="-1" aria-label="Previous month">‹</button><b>${MONTHS[m - 1]} ${y}</b><button class="btn sm" data-act="cvMonth" data-v="1" aria-label="Next month">›</button></div>
   <div class="cal">${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(w => `<span class="wd">${w}</span>`).join('')}${cells.join('')}</div>
-  <div class="small muted"><span style="display:inline-block;width:12px;height:12px;border-radius:3px;background:var(--accent);vertical-align:-1px"></span> a convoy list is ready for that date</div></div>`; }
+  <div class="calkey"><span><i style="background:var(--accent)"></i>Upcoming convoy</span><span><i style="border:2px solid var(--accent)"></i>Past convoy</span><span><i style="border:1px solid var(--ink)"></i>Today</span><span><i style="background:rgba(0,0,0,.28);border:1px solid var(--line)"></i>Weekend</span></div></div>`; }
 // a past date: only who travelled, in which car, and who drove
 function pastView(T){ const sv = daySnapshot(T);
   if (!sv.staff.length) return `<div class="empty small">No ${TRIP[T].name} convoy on this date.</div>`;
@@ -939,12 +968,46 @@ function cvCard(s){ const img = S.cvCards[s.key], T = cvT(), on = onTrip(T, s.ke
   <select class="cvcar" data-cvcar="${esc(s.key)}" aria-label="Vehicle for ${esc(s.name)}">${cvCarOptions(carOf(T, s.key))}</select>
   <div class="row"><span class="cvlbl"><span class="pill ${on?'p-done':'p-off'}">${on ? esc(TRIP[T].name) : 'Not on this trip'}</span><span class="cvsecname">${esc(secOf(s))}</span></span><span class="spacer"></span><button class="btn sm ghost" data-act="cvEdit" data-id="${esc(s.key)}">Edit</button></div></div>`; }
 
+function cvOwnerView(){
+  const list = S.cvStaff, T = cvT(), on = daySnapshot(T).staff.length, ed = cvEditable(), dt = new Date(S.cvDate + 'T12:00'), no = convoyNo(S.cvDate);
+  const left = `<aside class="cvleft">
+    <button class="btn primary block" data-act="cvNew">${S.cvPick ? 'Cancel' : '+ Create new convoy'}</button>
+    ${S.cvPick ? '<div class="regbox small"><b>New convoy</b><br>Click the date of the new convoy in the calendar.</div>' : ''}
+    <div class="${S.cvPick ? 'picking' : ''}">${calView()}</div>
+    <div class="card stack" style="gap:8px"><p class="panelh">Selected convoy</p>
+      <div style="font:800 18px/1.2 var(--f-label)">${DAYS[dt.getDay()]} ${fmtD(S.cvDate)}</div>
+      <div class="row small">${no ? `<b class="cvconv" style="font-size:14px">Convoy No. ${no}</b>` : '<span class="muted">No list yet</span>'}<span class="spacer"></span><span class="st ${ed ? 'ok' : 'no'}">${ed ? '✓ Saves automatically' : 'Past: view only'}</span></div>
+      <div class="small">To Naqoura <b>${dayCount(S.cvDate, 'TO')}</b> · From Naqoura <b>${dayCount(S.cvDate, 'FROM')}</b></div></div>
+    ${ed ? regBox() : ''}
+    <button class="btn" data-act="cvLoginSheet">Staff logins</button></aside>`;
+  const right = `<aside class="cvright">
+    <div class="card stack" style="gap:8px"><p class="panelh">Vehicles · ${esc(TRIP[T].name)}</p>
+      ${ed ? `<div class="carlist">${cvPlates().map(c => { const d = driverOf(T, c.plate); return `<button class="car" data-act="cvCar" data-plate="${esc(c.plate)}"><b>${esc(c.plate)}</b><span>${d ? 'Driver: ' + esc(d) + ' · ' : ''}<b style="color:var(--accent)">${cvInCar(T, c.plate).length}</b></span></button>`; }).join('')}
+        ${cvNoCar(T).length ? `<button class="car none" data-act="cvCar" data-plate=""><b>No vehicle</b><span><b>${cvNoCar(T).length}</b></span></button>` : ''}</div>
+        <button class="btn sm" data-act="cvCarNew">+ Add vehicle</button>`
+      : (daySnapshot(T).vehicles || []).map(v => `<div class="small"><b>${esc(v.plate)}</b> · ${v.count} staff${v.driver ? ' · Driver: ' + esc(v.driver) : ''}</div>`).join('') || '<div class="small muted">No vehicles on this trip.</div>'}</div>
+    <div class="card stack" style="gap:8px"><p class="panelh">Documents · ${esc(TRIP[T].name)}</p>
+      ${on ? `<div class="docs"><button class="btn sm" data-act="cvPdf" data-v="view">View PDF</button><button class="btn sm" data-act="cvPdf" data-v="pdf">Download PDF</button><button class="btn sm" data-act="cvPdf" data-v="docx">Word</button></div>
+        ${iscrRow(T)}` : '<div class="small muted">Tick staff for this trip first.</div>'}</div></aside>`;
+  const main = `<section class="cvmain stack">
+    <div class="card stack" style="gap:10px;border-color:var(--accent)">
+      <div class="row"><h2 style="margin:0">${DAYS[dt.getDay()]} ${fmtD(S.cvDate)}</h2><span class="spacer"></span><span style="font-family:var(--f-mono)"><b>${on}</b> of ${list.length} staff</span></div>
+      <div class="seg">${['TO','FROM'].map(X => `<button data-act="cvTrip" data-v="${X}" aria-pressed="${T === X}">${TRIP[X].name} · ${dayCount(S.cvDate, X)}</button>`).join('')}</div>
+      <div class="small muted">${TRIP[T].route} · escorted by the Irish contingent.${ed ? ' Tick who travels and put them in a car.' : ''}</div>
+      ${ed ? '' : pastView(T)}</div>
+    ${ed ? `<div class="row"><input class="inp" id="cvQ" placeholder="Search name, ID or number" value="${esc(S.cvQuery)}" style="flex:1;min-width:180px">
+      <div class="seg"><button data-act="cvShow" data-v="all" aria-pressed="${!S.cvOnly}">All</button><button data-act="cvShow" data-v="on" aria-pressed="${S.cvOnly}">On this trip</button></div></div>
+    ${cvSecRow()}
+    <div class="row"><button class="btn sm" data-act="cvAll" data-v="1">Tick all${S.cvSec ? ' ' + esc(S.cvSec) : ''}</button><button class="btn sm" data-act="cvAll" data-v="0">Untick all${S.cvSec ? ' ' + esc(S.cvSec) : ''}</button><span class="spacer"></span><button class="btn sm primary" data-act="cvAdd">+ Add new staff</button></div>
+    <div class="cvgrid">${list.map(cvCard).join('')}</div>` : ''}</section>`;
+  return `<div class="cvlayout">${left}${main}${right}</div>`; }
 function convoyView(){
   const list = S.cvStaff, T = cvT(), on = daySnapshot(T).staff.length;
   if (!S.cvLoaded) return `<div class="empty"><b>Loading the staff list</b>Connecting to the team database.</div>`;
   if (S.cvDenied) return `<div class="empty"><b>The database blocked the Convoy list</b>Add the Convoy lines to the Firestore rules in the Firebase console, then reload this page.</div>`;
   if (!list.length && !S.viewer) return `<div class="empty stack" style="gap:10px"><b>No staff yet</b><span>Load your saved list of critical staff (the file <b>convoy-staff-import.json</b>), or add people one by one. Numbers start at 1 and never change.</span>
     <div class="row" style="justify-content:center"><label class="btn primary">Load staff list file<input type="file" id="cvImport" accept=".json,application/json" hidden></label><button class="btn" data-act="cvAdd">+ Add new staff</button></div></div>`;
+  if (S.owner) return cvOwnerView();
   const ed = cvEditable(), dt = new Date(S.cvDate + 'T12:00');
   return `<div class="stack">
   <div class="row"><h2 style="margin:0">Convoy</h2><span class="spacer"></span>${S.owner ? '<button class="btn" data-act="cvLoginSheet">Staff logins</button>' : ''}<button class="btn ${S.cvCal ? '' : 'primary'}" data-act="cvCal" aria-expanded="${S.cvCal}">${S.cvCal ? 'Close calendar' : 'Open calendar'}</button></div>
@@ -1233,7 +1296,12 @@ document.addEventListener('click', e => {
   if (a === 'regDel') { if (t.dataset.confirm) db.collection('convoyReg').doc(t.dataset.id).delete().then(() => { toast('They can register again'); openSheet(regListSheet(), null, 'convoy'); }).catch(failed);
     else { t.dataset.confirm = 1; t.textContent = 'Tap again'; t.classList.add('danger'); } }
   if (a === 'regPick') { location.hash = 'reg=' + t.dataset.v; }
-  if (a === 'cvDay') { S.cvDate = t.dataset.v; render(); }
+  if (a === 'cvNew') { S.cvPick = !S.cvPick; render(); }
+  if (a === 'cvDay') { const d = t.dataset.v;
+    if (S.cvPick && d < isoDay(new Date())) { toast('Choose today or a later date for a new convoy'); return; }
+    S.cvDate = d; S.cvMonth = d.slice(0, 7);
+    if (S.cvPick) { S.cvPick = false; render(); toast('Convoy ' + fmtD(d) + ': open registration, then tick the staff'); const el = document.querySelector('#regClose'); if (el) el.closest('.regbox').scrollIntoView({block: 'nearest', behavior: 'smooth'}); return; }
+    render(); }
   if (a === 'cvMonth') { const [y, m] = S.cvMonth.split('-').map(Number); S.cvMonth = isoDay(new Date(y, m - 1 + Number(t.dataset.v), 1)).slice(0, 7); render(); }
   if (a === 'cvCar') openSheet(cvCarSheet(t.dataset.plate), null, 'convoy');
   if (a === 'cvCarNew') openSheet(cvCarForm(null), null, 'convoy');
