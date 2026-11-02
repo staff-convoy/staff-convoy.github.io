@@ -184,6 +184,13 @@ label.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
 /* full-width page for the supervisor: calendar and new convoy | staff | vehicles and documents */
 body.full .wrap{max-width:1680px;padding-inline:20px}
+/* Notes page uses the full width too: writing on the left, the notes across the rest */
+.ntlayout{display:grid;grid-template-columns:420px minmax(0,1fr);gap:18px;align-items:start}
+.ntform{position:sticky;top:112px}
+.ntform textarea{min-height:260px}
+.ntgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;align-items:start}
+.ntgrid>*{margin:0}
+@media (max-width:900px){.ntlayout{grid-template-columns:minmax(0,1fr)}.ntform{position:static}}
 .cvlayout{display:grid;grid-template-columns:290px minmax(0,1fr) 300px;grid-template-areas:"left main right";gap:18px;align-items:start}
 .cvleft{grid-area:left}.cvmain{grid-area:main;min-width:0}.cvright{grid-area:right}
 .cvleft,.cvright{position:sticky;top:112px;max-height:calc(100vh - 124px);overflow:auto;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin}
@@ -259,7 +266,7 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
   <div class="wrap">
     <div class="brand">
       <div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
-      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v42</div></div>
+      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v43</div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -422,7 +429,7 @@ function render(){
   const tabs = S.viewer || S.member ? TABS.filter(([k]) => k === 'convoy') : TABS.filter(([k]) => !OWNER_TABS.includes(k) || S.owner);
   if (S.user && S.loaded && !tabs.some(([k]) => k === S.tab)) S.tab = tabs[0][0];
   $('#tabs').innerHTML = ok && !S.member ? tabs.map(([k,l]) => `<button class="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${k==='orders'&&newCount()?`<span class="dot">${newCount()}</span>`:''}${k==='support'&&openSupport().length?`<span class="dot red">${openSupport().length}</span>`:''}</button>`).join('') : '';
-  const v = $('#view'); v.classList.toggle('wide', S.tab === 'attendance'); document.body.classList.toggle('full', !!(S.owner && S.tab === 'convoy')); const sx = v.querySelector('.scrollx')?.scrollLeft;
+  const v = $('#view'); v.classList.toggle('wide', S.tab === 'attendance'); document.body.classList.toggle('full', !!(S.owner && (S.tab === 'convoy' || S.tab === 'notes'))); const sx = v.querySelector('.scrollx')?.scrollLeft;
   if (!S.user) v.innerHTML = authView();
   else if (!S.user.emailVerified && !S.viewer && !S.member) v.innerHTML = verifyView();
   else if (!S.loaded) v.innerHTML = `<div class="empty"><b>Loading</b>Checking your access.</div>`;
@@ -585,11 +592,12 @@ const noteCard = (n, mine) => `<div class="card"><div class="row"><span class="s
 function notesView(){
   if (!S.owner) return `<div class="empty"><b>Notes</b>Only the supervisor writes notes.</div>`;
   const n = staffEmails().length;
-  return `<div class="stack"><form id="fNote" class="card stack" style="gap:8px"><h3 style="margin:0">Note for the critical staff</h3>
+  return `<div class="ntlayout"><form id="fNote" class="card stack ntform" style="gap:8px"><h3 style="margin:0">Note for the critical staff</h3>
   <input class="inp" id="nTopic" maxlength="80" placeholder="Subject (optional), e.g. Convoy 05/11 open">
   <textarea class="inp" id="nText" required maxlength="1500" placeholder="Write your note. Staff see it on their page when they sign in with their ID."></textarea>
   <div class="row"><span class="small muted">${n} staff with an email</span><span class="spacer"></span><button class="btn" type="submit" data-mail="1">Share + email staff</button><button class="btn primary" type="submit">Share note</button></div></form>
-  ${S.cvNotes.length ? S.cvNotes.map(x => noteCard(x, true)).join('') : `<div class="empty"><b>No notes yet</b>Notes you share show on the staff page.</div>`}</div>`; }
+  <section class="stack" style="min-width:0"><p class="panelh">Shared notes · ${S.cvNotes.length}</p>
+  ${S.cvNotes.length ? `<div class="ntgrid">${S.cvNotes.map(x => noteCard(x, true)).join('')}</div>` : `<div class="empty"><b>No notes yet</b>Notes you share show on the staff page.</div>`}</section></div>`; }
 
 /* --- Work orders --- */
 const newCount = () => S.orders.filter(o => o.status === 'new').length;
