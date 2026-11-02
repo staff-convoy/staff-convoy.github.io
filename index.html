@@ -259,7 +259,7 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
   <div class="wrap">
     <div class="brand">
       <div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
-      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v40</div></div>
+      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v41</div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -737,6 +737,13 @@ const escortList = () => { const l = (S.cvEscorts || ESCORTS).slice(); Object.va
 // a convoy exists once it was created, has a list, or has registration open
 const isConvoy = date => !!(S.cvMeta[date] || S.cvConvs[date] || hasList(date));
 const upcoming = () => [...new Set([...Object.keys(S.cvMeta), ...Object.keys(S.cvConvs), ...Object.keys(S.cvDays)])].filter(d => d >= isoDay(new Date()) && isConvoy(d)).sort();
+// a cancelled convoy: its lists, registration, registrations and escort all go
+async function cvDeleteConvoy(date){ if (date < isoDay(new Date())) return;
+  const info = db.collection('convoyInfo'), regs = Object.values(S.cvRegs).filter(r => r.date === date);
+  try { for (const r of regs) { await db.collection('convoyReg').doc(r.id).delete(); delete S.cvRegs[r.id]; }
+    for (const id of ['day_' + date + '_TO', 'day_' + date + '_FROM', 'saved_' + date + '_TO', 'saved_' + date + '_FROM', 'conv_' + date, 'meta_' + date]) await info.doc(id).delete();
+    delete S.cvDays[date]; delete S.cvConvs[date]; delete S.cvMeta[date]; toast('Convoy ' + fmtD(date) + ' deleted'); render(); }
+  catch (e) { failed(e); } }
 function cvSetEscort(date, escort){ S.cvMeta[date] = {...(S.cvMeta[date] || {}), kind: 'meta', date, escort}; render();
   return db.collection('convoyInfo').doc('meta_' + date).set({kind: 'meta', date, escort}, {merge: true}).catch(failed); }
 async function cvNewEscort(){ const name = (prompt('Name of the escort (for example INDOBATT):') || '').trim().toUpperCase().replace(/\s+/g, ' ');
@@ -996,7 +1003,8 @@ function cvOwnerView(){
       <div style="font:800 18px/1.2 var(--f-label)">${DAYS[dt.getDay()]} ${fmtD(S.cvDate)}</div>
       <div class="row small">${no ? `<b class="cvconv" style="font-size:14px">Convoy No. ${no}</b>` : '<span class="muted">No list yet</span>'}<span class="spacer"></span><span class="st ${ed ? 'ok' : 'no'}">${ed ? '✓ Saves automatically' : 'Past: view only'}</span></div>
       <div class="small">To Naqoura <b>${dayCount(S.cvDate, 'TO')}</b> · From Naqoura <b>${dayCount(S.cvDate, 'FROM')}</b></div>
-      <label class="f" style="margin:0">Escort<select id="cvEscort" ${ed ? '' : 'disabled'}>${escortList().map(x => `<option ${x === escortOf(S.cvDate) ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__new">+ New escort…</option></select></label></div>
+      <label class="f" style="margin:0">Escort<select id="cvEscort" ${ed ? '' : 'disabled'}>${escortList().map(x => `<option ${x === escortOf(S.cvDate) ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__new">+ New escort…</option></select></label>
+      ${ed && isConvoy(S.cvDate) ? '<button class="btn sm ghost" data-act="cvDelete">Delete convoy</button>' : ''}</div>
     ${ed ? regBox() : ''}
     <button class="btn" data-act="cvLoginSheet">Staff logins</button></aside>`;
   const right = `<aside class="cvright">
@@ -1319,6 +1327,7 @@ document.addEventListener('click', e => {
     else { t.dataset.confirm = 1; t.textContent = 'Tap again'; t.classList.add('danger'); } }
   if (a === 'regPick') { location.hash = 'reg=' + t.dataset.v; }
   if (a === 'cvNew') { S.cvPick = !S.cvPick; render(); }
+  if (a === 'cvDelete') { if (t.dataset.confirm) cvDeleteConvoy(S.cvDate); else { t.dataset.confirm = 1; t.textContent = 'Tap again to delete this convoy'; t.classList.add('danger'); } }
   if (a === 'cvDay') { const d = t.dataset.v;
     if (S.cvPick && d < isoDay(new Date())) { toast('Choose today or a later date for a new convoy'); return; }
     S.cvDate = d; S.cvMonth = d.slice(0, 7);
