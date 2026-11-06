@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v45.2">
+<meta name="app-version" content="v45.3">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1031,6 +1031,15 @@ async function regSubmit(){ const date = S.regShown, c = S.cvConvs[date], msg = 
     toast('✓ You are registered: ' + TRIP[dir].name); }
   catch (e) { console.warn(e); msg(e.code === 'permission-denied' ? 'Not registered: registration is closed, or you are already registered.' : 'Not registered. Check your connection and try again.'); } }
 window.addEventListener('hashchange', () => { S.regDate = regHash(); S.stMonthSet = false; render(); });
+// always the newest version: compare with the published page, reload once if it changed
+(function(){ const mine = (document.querySelector('meta[name="app-version"]') || {}).content || '';
+  if (/[?&]v=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash);
+  const check = () => fetch(location.pathname + '?nc=' + Date.now(), {cache: 'no-store'}).then(r => r.ok ? r.text() : '').then(t => {
+    const m = /<meta name="app-version" content="([^"]+)"/.exec(t), v = m && m[1];
+    if (!v || v === mine) return; let tried = ''; try { tried = sessionStorage.getItem('eu.reloadFor') || ''; } catch (e) {}
+    if (tried === v) return; try { sessionStorage.setItem('eu.reloadFor', v); } catch (e) {}
+    location.replace(location.pathname + '?v=' + encodeURIComponent(v) + location.hash); }).catch(() => {});
+  check(); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); }); })();
 
 /* --- Convoy calendar: a yellow square on every date that has a list --- */
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
