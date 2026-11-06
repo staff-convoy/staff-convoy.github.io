@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v44.1">
+<meta name="app-version" content="v45">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -50,12 +50,19 @@ main.wrap.wide{max-width:none;padding-inline:20px}
 [hidden]{display:none!important}
 
 header{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top,0px)}
-.brand{display:flex;align-items:center;gap:10px;padding-block:12px 8px}
+.brand{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;padding-block:12px 8px}
+.brand .title{display:flex;align-items:center;gap:12px;justify-content:center}
+.brand .title>div:last-child{text-align:center}
+.team{width:58px;height:44px;border-radius:14px;background:var(--accent);display:grid;place-items:center;flex:none}
+.team svg{width:46px;height:31px;fill:var(--accent-ink)}
+.team .hand{fill:none;stroke:var(--accent);stroke-width:1.6;stroke-linecap:round}
+.brand h1 span{color:var(--accent);display:block;margin-top:4px}
+@media (max-width:700px){.brand{display:flex;flex-direction:column;align-items:stretch;gap:6px}.brand>span:first-child{display:none}.brand .me{order:-1;display:flex;gap:10px;justify-content:flex-end;align-items:baseline}.brand h1{font-size:16px}}
 .bolt{width:34px;height:34px;border-radius:9px;background:var(--accent);display:grid;place-items:center;flex:none}
 .bolt svg{width:18px;height:18px;fill:var(--accent-ink)}
 .brand h1{font:800 20px/1 var(--f-label);text-transform:uppercase;margin:0}
 .brand .sub{font:500 11px/1 var(--f-mono);letter-spacing:.22em;text-transform:uppercase;color:var(--accent);margin-top:4px}
-.brand .me{margin-left:auto;text-align:right;font-size:13px;color:var(--muted);min-width:0}
+.brand .me{justify-self:end;text-align:right;font-size:13px;color:var(--muted);min-width:0}
 .brand .me button{background:none;border:0;color:var(--muted);text-decoration:underline;cursor:pointer;padding:0;font-size:13px}
 .tabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
 .tab{border:0;background:none;padding:9px 12px 11px;font:700 14px/1 var(--f-label);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;cursor:pointer}
@@ -247,10 +254,16 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
 .regdone{border:2px solid var(--ok);border-radius:12px;padding:14px;font-size:17px}
 .stlayout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:18px;align-items:start}
 .stside{position:sticky;top:112px}
-@media (max-width:820px){.stlayout{grid-template-columns:minmax(0,1fr)}.stside{position:static}}
+@media (max-width:820px){.stlayout{grid-template-columns:minmax(0,1fr)}.stside{position:static;order:2}}
 .stgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 .stcard{display:flex;flex-direction:column;gap:8px}
 .stcard.me{border-color:var(--accent)}
+/* the group on days with no convoy: only the ID card pictures, nothing around them */
+.grpgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
+@media (max-width:600px){.grpgrid{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}.grpid{border-radius:5px}}
+.grpid{display:block;width:100%;aspect-ratio:1.55;object-fit:cover;border-radius:8px;box-shadow:0 3px 10px rgba(0,0,0,.35)}
+.grpid.none{display:grid;place-items:center;background:rgba(255,255,255,.06);border:1px dashed var(--line);color:var(--muted);font-size:13px;box-shadow:none;text-align:center;padding:8px}
+.grpid.me{outline:3px solid var(--accent);outline-offset:3px}
 .rowrap{border:1px solid var(--line);border-radius:10px;overflow:auto}
 .ro{width:100%;min-width:520px;border-collapse:collapse;font-size:14px;table-layout:fixed}
 .ro th,.ro td{padding:9px 12px;text-align:left;border-right:1px solid var(--muted);border-bottom:1px solid var(--line);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -269,8 +282,9 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
 <header>
   <div class="wrap">
     <div class="brand">
-      <div class="bolt" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg></div>
-      <div><h1>Critical Staff</h1><div class="sub">Naqoura - Sector West · v44</div></div>
+      <span></span>
+      <div class="title"><div class="team" aria-hidden="true"><svg viewBox="0 0 48 32"><circle cx="11" cy="11" r="5"/><circle cx="37" cy="11" r="5"/><path d="M1 30c0-6 4.5-10 10-10 3 0 5.5 1.2 7.2 3.2A13 13 0 0 0 15 30z"/><path d="M47 30c0-6-4.5-10-10-10-3 0-5.5 1.2-7.2 3.2A13 13 0 0 1 33 30z"/><circle cx="24" cy="9" r="6.5"/><path d="M12 31c0-7.5 5.4-13 12-13s12 5.5 12 13z"/><path class="hand" d="M17 21.5c1.6 1.8 4 2.8 7 2.8s5.4-1 7-2.8"/></svg></div>
+        <div><h1>Ain Ebel - Rmeich - Debel <span>Critical Staff</span></h1><div class="sub">Naqoura - Sector West · v45</div></div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -361,7 +375,7 @@ function listen(){
     unsubs.push(db.collection('convoyLogins').doc(S.login).onSnapshot(d => { S.profile = d.exists ? d.data() : null; S.profileLoaded = true; render(); },
       e => { console.warn(e); S.profileLoaded = true; render(); })); }
   if (S.owner) {
-    unsubs.push(db.collection('convoyStaff').orderBy('no').onSnapshot(s => { S.cvStaff = s.docs.filter(d => typeof d.data().no === 'number').map(d => ({key:d.id, ...d.data()})); S.cvLoaded = true; cvSecMigrate(); cvLoginsSync(false); cvApplyRegs(); render(); }, e => { console.warn(e); S.cvLoaded = true; S.cvDenied = e.code === 'permission-denied'; render(); }));
+    unsubs.push(db.collection('convoyStaff').orderBy('no').onSnapshot(s => { S.cvStaff = s.docs.filter(d => typeof d.data().no === 'number').map(d => ({key:d.id, ...d.data()})); S.cvLoaded = true; cvSecMigrate(); cvLoginsSync(false); cvApplyRegs(); cvGroupSync(); render(); }, e => { console.warn(e); S.cvLoaded = true; S.cvDenied = e.code === 'permission-denied'; render(); }));
     cvListenInfo(); cvListenRegs(); cvListenLogins();
   }
 }
@@ -379,12 +393,13 @@ function cvListenInfo(){
         else if (x.kind === 'conv') convs[x.date] = x;
         else if (x.kind === 'meta') meta[x.date] = x;
         else if (d.id === 'escorts') S.cvEscorts = x.list || null;
+        else if (d.id === 'group') S.cvGroup = x.list || [];
         else if (x.kind === 'cnote') notes.push({id: d.id, ...x});
         else if (x.kind === 'day') put(x.date, x.dir, {src: 'day', people: x.people || {}, drivers: x.drivers || {}, leader: x.leader || '', staff: x.staff, vehicles: x.vehicles});
         else if (x.kind === 'saved') { const people = {}, drivers = {}; (x.staff || []).forEach(p => people[p.key] = p.plate || ''); (x.vehicles || []).forEach(v => { if (v.driver) drivers[v.plate] = v.driver; });
           put(x.date, x.dir, {src: 'saved', people, drivers, staff: x.staff, vehicles: x.vehicles}); }
         else if (d.id === 'tripTO' || d.id === 'tripFROM') put(x.date, d.id.slice(4), {src: 'trip', people: x.people || {}, drivers: x.drivers || {}}); });
-      S.cvDays = days; S.cvConvs = convs; S.cvMeta = meta; S.cvNotes = notes.sort((a, b) => b.at - a.at); S.cvInfoLoaded = true; cvApplyRegs(); render(); }, e => { console.warn(e); S.cvInfoLoaded = true; render(); }));
+      S.cvDays = days; S.cvConvs = convs; S.cvMeta = meta; S.cvNotes = notes.sort((a, b) => b.at - a.at); S.cvInfoLoaded = true; cvApplyRegs(); if (S.cvLoaded) cvGroupSync(); render(); }, e => { console.warn(e); S.cvInfoLoaded = true; render(); }));
   }
 }
 // ID card pictures are large, so they load only once the Convoy tab is opened
@@ -931,6 +946,11 @@ function cvLoginSheet(){ const want = cvLoginWanted(), have = S.cvLogins || {}, 
   <div class="rowrap"><table class="ro"><colgroup><col style="width:56px"><col><col><col style="width:90px"></colgroup><tr><th style="text-align:center">No</th><th>Name</th><th>User</th><th>Password</th></tr>
   ${S.cvStaff.filter(s => want[loginOfId(s.idNo)]).map(s => { const l = loginOfId(s.idNo); return `<tr><td class="no">${s.no}</td><td class="nm">${esc(s.name)}</td><td style="font-family:var(--f-mono)">${esc(l.toUpperCase())}${have[l] ? '' : ' <span class="small muted">(not made)</span>'}</td><td style="font-family:var(--f-mono)">${esc(want[l].pw)}</td></tr>`; }).join('')}</table></div></div>`; }
 
+// the whole group, for the staff page on days with no convoy: name, ID and section only
+function cvGroupSync(){ if (!S.owner || !S.cvInfoLoaded) return;
+  const list = S.cvStaff.map(s => ({key: s.key, no: s.no, name: s.name || '', idNo: s.idNo || '', section: s.section || ''}));
+  if (JSON.stringify(list) === JSON.stringify(S.cvGroup || null)) return; S.cvGroup = list;
+  db.collection('convoyInfo').doc('group').set({kind: 'group', list}).catch(e => console.warn(e)); }
 /* --- What a staff member sees: register once, then a locked view of the convoy, without cars or drivers --- */
 const tripRank = (date, T) => date + (T === 'FROM' ? '1' : '0');
 function stLastTrip(before){ const key = S.profile.key; let best = null;
@@ -944,9 +964,12 @@ function stPeople(date, T){ const r = recOf(date, T), out = [], seen = new Set()
   (r && r.staff || []).forEach(x => { if (typeof r.people[x.key] === 'string' && !seen.has(x.key)) { seen.add(x.key); out.push(x); } });
   Object.values(S.cvRegs).forEach(g => { if (g.date === date && g.dir === T && !g.applied && !seen.has(g.key)) { seen.add(g.key); out.push({key: g.key, no: g.no, name: g.name, idNo: g.idNo, section: g.section}); } });
   return out.sort(bySection); }
-function stCard(x){ const img = S.stCards[x.key];
+function grpCard(x){ const img = S.stCards[x.key]; if (img === undefined) stCard(x);
+  const me = S.profile && x.key === S.profile.key ? ' me' : '';
+  return img ? `<img class="grpid${me}" data-act="grpZoom" data-key="${esc(x.key)}" alt="ID card of ${esc(x.name)}" src="${img}" style="cursor:zoom-in">` : `<div class="grpid none${me}">${esc(x.name)}<br>${img === '' ? 'No ID card yet' : 'Loading…'}</div>`; }
+function stCard(x, cls){ const img = S.stCards[x.key];
   if (img === undefined) { S.stCards[x.key] = null; db.collection('convoyCards').doc(x.key).get().then(d => { S.stCards[x.key] = d.exists && d.data().img || ''; render(); }).catch(() => { S.stCards[x.key] = ''; render(); }); }
-  return `<div class="card stcard ${S.profile && x.key === S.profile.key ? 'me' : ''}"><div class="row" style="gap:8px;flex-wrap:nowrap"><span class="cvno">${x.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(x.name)}</span><br><span class="small muted" style="font-family:var(--f-mono)">${esc(x.idNo || '')}</span></span></div>
+  return `<div class="card stcard ${cls || ''} ${S.profile && x.key === S.profile.key ? 'me' : ''}"><div class="row" style="gap:8px;flex-wrap:nowrap"><span class="cvno">${x.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(x.name)}</span><br><span class="small muted" style="font-family:var(--f-mono)">${esc(x.idNo || '')}</span></span></div>
   <div class="cvthumb">${img ? `<img alt="ID card of ${esc(x.name)}" src="${img}">` : img === '' ? 'No ID card' : 'Loading picture…'}</div>
   <span class="cvsecname" style="text-align:left">${esc(x.section || '')}</span></div>`; }
 function regView(){
@@ -956,14 +979,17 @@ function regView(){
   const all = [...new Set([...Object.keys(S.cvMeta), ...Object.keys(S.cvConvs), ...Object.keys(S.cvDays)])].filter(isConvoy).sort();
   const lastPast = all.filter(d => d < today).pop();
   // an open convoy first; between convoys the last one, so the page is never empty
-  const date = S.regDate || (list[0] || {}).date || all.filter(d => d >= today)[0] || lastPast;
+  const date = S.regDate || (list[0] || {}).date || all.filter(d => d >= today)[0] || '';
   if (date && !S.stMonthSet) { S.stMonthSet = true; S.cvMonth = date.slice(0, 7); }
   S.regShown = date || '';
   const notesHtml = S.cvNotes.length ? `<h3 class="sechead">Notes from the supervisor</h3>${S.cvNotes.slice(0, 10).map(x => noteCard(x, false)).join('')}` : '';
   const side = `<aside class="stside stack" style="gap:8px"><p class="panelh">All convoys</p>${calView('regPick')}
     ${list.length ? `<div class="small"><b>Open for registration:</b> ${list.map(x => `<a href="#reg=${x.date}">${fmtD(x.date)}</a>`).join(', ')}</div>` : ''}</aside>`;
   const wrap = inner => `<div class="stlayout">${side}<section class="stack" style="min-width:0">${inner}${notesHtml}</section></div>`;
-  if (!date) return wrap(`<div class="empty"><b>No convoy yet</b>The supervisor sends the link in the WhatsApp group when a new convoy opens.</div>`);
+  if (!date) { const g = (S.cvGroup || []).slice().sort(bySection);
+    return wrap(`<div class="card stack" style="gap:6px;border-color:var(--accent)"><div class="row"><h2 style="margin:0">Our group</h2><span class="spacer"></span><span class="st no">No convoy today</span></div>
+      <div class="small muted">${g.length} critical staff${lastPast ? ` · last convoy <a href="#reg=${lastPast}">${fmtD(lastPast)}</a>` : ''}. Tap a date in the calendar to see who travelled.</div></div>
+      ${g.length ? `<div class="grpgrid">${g.map(grpCard).join('')}</div>` : '<div class="empty small">The staff list is not ready yet.</div>'}`); }
   const dt = new Date(date + 'T12:00'), no = convoyNo(date), conv = isConvoy(date), c = S.cvConvs[date];
   const people = `<div class="stack">${['TO', 'FROM'].map(T => { const l = stPeople(date, T);
       return `<h3 class="sechead">${TRIP[T].name} <span>${l.length} staff</span></h3>${l.length ? `<div class="stgrid">${l.map(stCard).join('')}</div>` : '<div class="empty small">Nobody.</div>'}`; }).join('')}</div>`;
@@ -1398,6 +1424,8 @@ document.addEventListener('click', e => {
     else { t.dataset.confirm = 1; t.textContent = 'Tap again to stop'; t.classList.add('danger'); } }
   if (a === 'regDel') { if (t.dataset.confirm) db.collection('convoyReg').doc(t.dataset.id).delete().then(() => { toast('They can register again'); openSheet(regListSheet(), null, 'convoy'); }).catch(failed);
     else { t.dataset.confirm = 1; t.textContent = 'Tap again'; t.classList.add('danger'); } }
+  if (a === 'grpZoom') { const x = (S.cvGroup || []).find(g => g.key === t.dataset.key), img = S.stCards[t.dataset.key];
+    if (x && img) openSheet(`<div class="row" style="margin-bottom:10px"><h2 style="margin:0">${esc(x.name)}</h2><span class="spacer"></span><button class="btn ghost" data-act="close">Close</button></div><img alt="ID card of ${esc(x.name)}" src="${img}" style="width:100%;border-radius:12px"><div class="small muted" style="margin-top:8px">${esc(x.section || '')}</div>`, null, 'convoy'); }
   if (a === 'regPick') { S.cvMonth = t.dataset.v.slice(0, 7); location.hash = 'reg=' + t.dataset.v; }
   if (a === 'cvNew') { S.cvPick = !S.cvPick; render(); }
   if (a === 'cvRotation') cvRotation();
