@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v45">
+<meta name="app-version" content="v45.1">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -979,16 +979,17 @@ function regView(){
   const all = [...new Set([...Object.keys(S.cvMeta), ...Object.keys(S.cvConvs), ...Object.keys(S.cvDays)])].filter(isConvoy).sort();
   const lastPast = all.filter(d => d < today).pop();
   // an open convoy first; between convoys the last one, so the page is never empty
-  const date = S.regDate || (list[0] || {}).date || all.filter(d => d >= today)[0] || '';
+  // registration open, or the convoy day itself: that convoy; any other day: the whole group
+  const date = S.regDate || (list[0] || {}).date || (isConvoy(today) ? today : '');
   if (date && !S.stMonthSet) { S.stMonthSet = true; S.cvMonth = date.slice(0, 7); }
   S.regShown = date || '';
   const notesHtml = S.cvNotes.length ? `<h3 class="sechead">Notes from the supervisor</h3>${S.cvNotes.slice(0, 10).map(x => noteCard(x, false)).join('')}` : '';
   const side = `<aside class="stside stack" style="gap:8px"><p class="panelh">All convoys</p>${calView('regPick')}
     ${list.length ? `<div class="small"><b>Open for registration:</b> ${list.map(x => `<a href="#reg=${x.date}">${fmtD(x.date)}</a>`).join(', ')}</div>` : ''}</aside>`;
   const wrap = inner => `<div class="stlayout">${side}<section class="stack" style="min-width:0">${inner}${notesHtml}</section></div>`;
-  if (!date) { const g = (S.cvGroup || []).slice().sort(bySection);
+  if (!date) { const g = (S.cvGroup || []).slice().sort(bySection), nextUp = all.filter(d => d > today)[0];
     return wrap(`<div class="card stack" style="gap:6px;border-color:var(--accent)"><div class="row"><h2 style="margin:0">Our group</h2><span class="spacer"></span><span class="st no">No convoy today</span></div>
-      <div class="small muted">${g.length} critical staff${lastPast ? ` · last convoy <a href="#reg=${lastPast}">${fmtD(lastPast)}</a>` : ''}. Tap a date in the calendar to see who travelled.</div></div>
+      <div class="small muted">${g.length} critical staff${lastPast ? ` · last convoy <a href="#reg=${lastPast}">${fmtD(lastPast)}</a>` : ''}${nextUp ? ` · next convoy <a href="#reg=${nextUp}">${fmtD(nextUp)}</a>` : ''}. Tap a date in the calendar to see who travelled.</div></div>
       ${g.length ? `<div class="grpgrid">${g.map(grpCard).join('')}</div>` : '<div class="empty small">The staff list is not ready yet.</div>'}`); }
   const dt = new Date(date + 'T12:00'), no = convoyNo(date), conv = isConvoy(date), c = S.cvConvs[date];
   const people = `<div class="stack">${['TO', 'FROM'].map(T => { const l = stPeople(date, T);
