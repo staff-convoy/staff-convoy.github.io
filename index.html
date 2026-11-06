@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v45.1">
+<meta name="app-version" content="v45.2">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -980,13 +980,15 @@ function regView(){
   const lastPast = all.filter(d => d < today).pop();
   // an open convoy first; between convoys the last one, so the page is never empty
   // registration open, or the convoy day itself: that convoy; any other day: the whole group
-  const date = S.regDate || (list[0] || {}).date || (isConvoy(today) ? today : '');
+  // a date without a convoy picked in the calendar also shows the group
+  const date = S.regDate ? (isConvoy(S.regDate) ? S.regDate : '') : ((list[0] || {}).date || (isConvoy(today) ? today : ''));
   if (date && !S.stMonthSet) { S.stMonthSet = true; S.cvMonth = date.slice(0, 7); }
   S.regShown = date || '';
   const notesHtml = S.cvNotes.length ? `<h3 class="sechead">Notes from the supervisor</h3>${S.cvNotes.slice(0, 10).map(x => noteCard(x, false)).join('')}` : '';
   const side = `<aside class="stside stack" style="gap:8px"><p class="panelh">All convoys</p>${calView('regPick')}
     ${list.length ? `<div class="small"><b>Open for registration:</b> ${list.map(x => `<a href="#reg=${x.date}">${fmtD(x.date)}</a>`).join(', ')}</div>` : ''}</aside>`;
-  const wrap = inner => `<div class="stlayout">${side}<section class="stack" style="min-width:0">${inner}${notesHtml}</section></div>`;
+  const back = S.regDate && isConvoy(S.regDate) ? `<a class="btn sm" href="#" data-act="regGroup" style="align-self:flex-start">← All the group</a>` : '';
+  const wrap = inner => `<div class="stlayout">${side}<section class="stack" style="min-width:0">${back}${inner}${notesHtml}</section></div>`;
   if (!date) { const g = (S.cvGroup || []).slice().sort(bySection), nextUp = all.filter(d => d > today)[0];
     return wrap(`<div class="card stack" style="gap:6px;border-color:var(--accent)"><div class="row"><h2 style="margin:0">Our group</h2><span class="spacer"></span><span class="st no">No convoy today</span></div>
       <div class="small muted">${g.length} critical staff${lastPast ? ` · last convoy <a href="#reg=${lastPast}">${fmtD(lastPast)}</a>` : ''}${nextUp ? ` · next convoy <a href="#reg=${nextUp}">${fmtD(nextUp)}</a>` : ''}. Tap a date in the calendar to see who travelled.</div></div>
@@ -1425,6 +1427,7 @@ document.addEventListener('click', e => {
     else { t.dataset.confirm = 1; t.textContent = 'Tap again to stop'; t.classList.add('danger'); } }
   if (a === 'regDel') { if (t.dataset.confirm) db.collection('convoyReg').doc(t.dataset.id).delete().then(() => { toast('They can register again'); openSheet(regListSheet(), null, 'convoy'); }).catch(failed);
     else { t.dataset.confirm = 1; t.textContent = 'Tap again'; t.classList.add('danger'); } }
+  if (a === 'regGroup') { e.preventDefault(); history.replaceState(null, '', location.pathname + location.search); S.regDate = ''; render(); return; }
   if (a === 'grpZoom') { const x = (S.cvGroup || []).find(g => g.key === t.dataset.key), img = S.stCards[t.dataset.key];
     if (x && img) openSheet(`<div class="row" style="margin-bottom:10px"><h2 style="margin:0">${esc(x.name)}</h2><span class="spacer"></span><button class="btn ghost" data-act="close">Close</button></div><img alt="ID card of ${esc(x.name)}" src="${img}" style="width:100%;border-radius:12px"><div class="small muted" style="margin-top:8px">${esc(x.section || '')}</div>`, null, 'convoy'); }
   if (a === 'regPick') { S.cvMonth = t.dataset.v.slice(0, 7); location.hash = 'reg=' + t.dataset.v; }
