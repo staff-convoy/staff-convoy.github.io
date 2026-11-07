@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46">
+<meta name="app-version" content="v46.1">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1028,7 +1028,7 @@ function regView(){
   else body = `<div class="empty"><b>Registration is closed</b>You did not register for this convoy. For any change, contact the supervisor.</div>`;
   return wrap(`<div class="card stack" style="gap:12px;border-color:var(--accent)">${head(open ? 'Registration open until ' + fmtWhen(c.closesAt) : 'Registration closed', open)}
     ${body}</div>
-  ${mine || !open ? people : ''}`); }
+  ${people}`); }
 async function regSubmit(){ const date = S.regShown, c = S.cvConvs[date], msg = t => { const m = $('#regMsg'); if (m) m.textContent = t; };
   const dir = (document.querySelector('input[name="regDir"]:checked') || {}).value, drive = !!($('#regDrive') || {}).checked;
   if (!dir) { msg('Choose To Naqoura or From Naqoura.'); return; }
