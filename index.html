@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47.3">
+<meta name="app-version" content="v47.4">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1017,7 +1017,7 @@ function visitsView(){ if (!S.owner) return '';
     ${never.length ? `<p class="panelh" style="margin-top:8px">Never signed in · ${never.length}</p><div class="small">${never.map(x => esc(x.s.no + '. ' + x.s.name)).join(' · ')}</div>` : ''}</section>
   <section class="card stack" style="gap:8px"><h3 style="margin:0">Archive · every sign-in</h3>
     ${Object.keys(days).length ? Object.keys(days).sort().reverse().map(d => `<p class="panelh" style="margin-top:6px">${DAYS[new Date(d + 'T12:00').getDay()]} ${fmtD(d)} · ${days[d].length}</p>
-      ${days[d].map(v => `<div class="small" style="display:flex;gap:10px"><span style="font-family:var(--f-mono);min-width:44px">${hm(v.at)}</span><span style="flex:1">${esc(v.name || v.login)}</span><span class="muted">${esc(v.device || '')}</span></div>`).join('')}`).join('') : '<div class="empty small">No visits recorded yet. They appear as soon as staff sign in.</div>'}</section></div>`; }
+      ${days[d].map(v => `<div class="small" style="display:flex;gap:10px"><span style="font-family:var(--f-mono);min-width:130px">${fmtD(isoDay(new Date(v.at)))} ${hm(v.at)}</span><span style="flex:1">${esc(v.name || v.login)}</span><span class="muted">${esc(v.device || '')}</span></div>`).join('')}`).join('') : '<div class="empty small">No visits recorded yet. They appear as soon as staff sign in.</div>'}</section></div>`; }
 /* --- What a staff member sees: register once, then a locked view of the convoy, without cars or drivers --- */
 const tripRank = (date, T) => date + (T === 'FROM' ? '1' : '0');
 function stLastTrip(before){ const key = S.profile.key; let best = null;
