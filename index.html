@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47.6">
+<meta name="app-version" content="v47.7">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -80,7 +80,8 @@ h3{font:700 13px/1.2 var(--f-label);letter-spacing:.08em;text-transform:uppercas
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:8px 16px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:42px}
 .btn:hover{border-color:var(--muted)}
 .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
-.btn.danger{background:var(--urgent);border-color:var(--urgent);color:#fff}
+.btn.danger{background:#c62828;border-color:#c62828;color:#fff;font-weight:700}
+.btn.danger:hover{background:#b71c1c;border-color:#b71c1c}
 .btn.ghost{background:none;border-color:transparent;color:var(--muted)}
 .btn.sm{min-height:34px;padding:4px 12px;font-size:14px}
 .btn:disabled{opacity:.5;cursor:not-allowed}
@@ -642,7 +643,7 @@ function notesView(){
   <div class="small muted">Shows at the top of every staff page until you remove it.</div>
   <textarea class="inp" id="ncText" maxlength="600" style="min-height:70px" placeholder="e.g. Bring your ID card">${esc(nc ? nc.text : '')}</textarea>
   <label class="pick" style="gap:10px"><input type="checkbox" id="ncClose" ${!nc || nc.showClose ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--accent)"> <span><b>Add the registration closing date</b><br><span class="small muted">${closeLine() ? '“' + esc(closeLine()) + '”. It follows the closing date you set on the Convoy page.' : (closedLine() ? 'Staff now see in red: “' + esc(closedLine()) + '”.' : 'No registration is open now. It shows by itself when you open one.')}</span></span></label>
-  <div class="row"><span class="spacer"></span>${nc ? '<button class="btn ghost" type="button" data-act="noticeDel">Remove notice</button>' : ''}<button class="btn primary" type="submit">${nc ? 'Update notice' : 'Show notice'}</button></div></form>
+  <div class="row"><span class="spacer"></span>${nc ? '<button class="btn danger" type="button" data-act="noticeDel">Remove notice</button>' : ''}<button class="btn primary" type="submit">${nc ? 'Update notice' : 'Show notice'}</button></div></form>
   ${visitsView()}`; }
 
 /* --- Work orders --- */
@@ -1007,7 +1008,7 @@ function visitsView(){ if (!S.owner) return '';
   const seen = staff.filter(x => x.v).sort((a, b) => b.v.last - a.v.last), never = staff.filter(x => !x.v), today = isoDay(new Date());
   const days = {}; S.visits.forEach(v => { const d = isoDay(new Date(v.at)); (days[d] = days[d] || []).push(v); });
   const hm = t => new Date(t).toTimeString().slice(0, 5);
-  return `<div class="row" style="margin-bottom:10px"><h2 style="margin:0">Sign-ins recorded</h2><span class="spacer"></span><button class="btn sm" data-act="visExp" data-v="xlsx">Export Excel</button><button class="btn sm" data-act="visExp" data-v="pdf">Export PDF</button><button class="btn sm ghost" data-act="visDel">Delete archive</button></div>
+  return `<div class="row" style="margin-bottom:10px"><h2 style="margin:0">Sign-ins recorded</h2><span class="spacer"></span><button class="btn sm" data-act="visExp" data-v="xlsx">Export Excel</button><button class="btn sm" data-act="visExp" data-v="pdf">Export PDF</button><button class="btn sm danger" data-act="visDel">🗑 Delete archive</button></div>
   <div class="ntlayout" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
   <section class="card stack" style="gap:8px"><div class="row"><h3 style="margin:0">Who signed in</h3><span class="spacer"></span><span class="small muted">${seen.length} of ${staff.length} staff · ${S.visits.length} visits</span></div>
     <div class="rowrap"><table class="ro"><tr><th style="text-align:center">No</th><th>Name</th><th>Last visit</th><th style="text-align:center">Visits</th></tr>
@@ -1197,7 +1198,7 @@ function cvOwnerView(){
       <div class="row small">${no ? `<b class="cvconv" style="font-size:14px">Convoy No. ${no}</b>` : '<span class="muted">No list yet</span>'}<span class="spacer"></span><span class="st ${ed ? 'ok' : 'no'}">${ed ? '✓ Saves automatically' : 'Past: view only'}</span></div>
       <div class="small">To Naqoura <b>${dayCount(S.cvDate, 'TO')}</b> · From Naqoura <b>${dayCount(S.cvDate, 'FROM')}</b></div>
       <label class="f" style="margin:0">Escort<select id="cvEscort" ${ed ? '' : 'disabled'}>${escortList().map(x => `<option ${x === escortOf(S.cvDate) ? 'selected' : ''}>${esc(x)}</option>`).join('')}<option value="__new">+ New escort…</option></select></label>
-      ${ed && isConvoy(S.cvDate) ? '<button class="btn sm ghost" data-act="cvDelete">Delete convoy</button>' : ''}</div>
+      ${ed && isConvoy(S.cvDate) ? '<button class="btn sm danger" data-act="cvDelete">🗑 Delete convoy</button>' : ''}</div>
     ${ed ? regBox() : ''}
     <button class="btn" data-act="cvRepOpen">Monthly report</button>
     <button class="btn" data-act="cvLoginSheet">Staff logins</button></aside>`;
@@ -1287,7 +1288,7 @@ function cvCarForm(c){ cvCarEditing = c || null; const T = cvT();
   <datalist id="cvNames">${S.cvStaff.map(s => `<option value="${esc(s.name)}">`).join('')}</datalist>
   <p class="small muted" style="margin:0">If the driver is on your staff list, they are put on this trip and in this car automatically.</p>
   <div class="err" id="carMsg"></div>
-  <div class="row">${c ? `<button class="btn ghost" type="button" data-act="cvCarDel" data-plate="${esc(c.plate)}">Remove vehicle</button>` : ''}<span class="spacer"></span><button class="btn primary" type="submit">Save</button></div></form>`; }
+  <div class="row">${c ? `<button class="btn danger" type="button" data-act="cvCarDel" data-plate="${esc(c.plate)}">Remove vehicle</button>` : ''}<span class="spacer"></span><button class="btn primary" type="submit">Save</button></div></form>`; }
 async function cvCarSave(){ const T = cvT();
   const plate = val('carPlate').replace(/\s+/g, ' '), driver = val('carDriver'); if (!plate) return;
   const old = cvCarEditing ? cvCarEditing.plate : '';
