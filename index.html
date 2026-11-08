@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46.1">
+<meta name="app-version" content="v46.2">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -603,6 +603,19 @@ function mailTeam(topic, text){
   location.href = 'mailto:' + to.join(',') + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body);
 }
 /* --- Notes for the critical staff: written by the supervisor, emailed to the staff, read by staff on their page --- */
+// emails of the staff on each trip of a convoy, ready to paste in Outlook (To / From Naqoura)
+function mailListCard(){ const today = isoDay(new Date());
+  const all = [...new Set([...Object.keys(S.cvMeta), ...Object.keys(S.cvConvs), ...Object.keys(S.cvDays)])].filter(isConvoy).sort();
+  if (!all.length) return '';
+  const d = all.includes(S.mlDate) ? S.mlDate : (all.find(x => x >= today) || all[all.length - 1]); S.mlDate = d;
+  const box = T => { const ppl = stPeople(d, T).map(x => S.cvStaff.find(s => s.key === x.key) || x), mails = [...new Set(ppl.map(s => (s.email || '').trim()).filter(Boolean))], miss = ppl.filter(s => !(s.email || '').trim()).map(s => s.name);
+    return `<div class="stack" style="gap:6px;flex:1;min-width:260px"><div class="row"><b>${TRIP[T].name}</b><span class="small muted">${ppl.length} staff · ${mails.length} email${mails.length === 1 ? '' : 's'}</span><span class="spacer"></span>${mails.length ? `<button class="btn sm primary" type="button" data-act="mlCopy" data-v="${T}">Copy emails</button>` : ''}</div>
+      <textarea class="inp" readonly id="ml${T}" style="min-height:70px;font-size:13px" placeholder="Nobody on this trip yet">${esc(mails.join('; '))}</textarea>
+      ${miss.length ? `<div class="small" style="color:var(--accent)">No email: ${miss.map(esc).join(', ')}</div>` : ''}</div>`; };
+  return `<div class="card stack" style="gap:10px;margin-bottom:18px"><div class="row"><h3 style="margin:0">✉ Emails per convoy</h3><span class="spacer"></span>
+    <label class="small muted">Convoy <select id="mlDate" class="inp" style="width:auto;display:inline-block;padding:6px 10px">${all.slice().reverse().map(x => `<option value="${x}" ${x === d ? 'selected' : ''}>${DAYS[new Date(x + 'T12:00').getDay()].slice(0, 3)} ${fmtD(x)}${convoyNo(x) ? ' · No. ' + convoyNo(x) : ''}</option>`).join('')}</select></label></div>
+    <div class="small muted">Staff on the list and staff who registered. Copy and paste into the To box of your security email.</div>
+    <div class="row" style="align-items:flex-start;gap:16px;flex-wrap:wrap">${box('TO')}${box('FROM')}</div></div>`; }
 const staffEmails = () => [...new Set(S.cvStaff.map(s => (s.email || '').trim().toLowerCase()).filter(Boolean))];
 function mailStaff(topic, text){ const to = staffEmails();
   if (!to.length) { toast('No staff email yet. Add emails with Edit on the staff cards.', true); return; }
@@ -615,7 +628,7 @@ function notesView(){
   if (!S.owner) return `<div class="empty"><b>Notes</b>Only the supervisor writes notes.</div>`;
   const n = staffEmails().length;
   const nc = S.cvNotice;
-  return `<form id="fNotice" class="card stack" style="gap:8px;border-color:var(--accent);margin-bottom:18px"><div class="row"><h3 style="margin:0">📢 Notice for all staff</h3><span class="spacer"></span><span class="st ${nc ? 'ok' : 'no'}">${nc ? 'Showing to staff since ' + esc(fmtWhen(nc.at)) : 'No notice showing'}</span></div>
+  return `${mailListCard()}<form id="fNotice" class="card stack" style="gap:8px;border-color:var(--accent);margin-bottom:18px"><div class="row"><h3 style="margin:0">📢 Notice for all staff</h3><span class="spacer"></span><span class="st ${nc ? 'ok' : 'no'}">${nc ? 'Showing to staff since ' + esc(fmtWhen(nc.at)) : 'No notice showing'}</span></div>
   <div class="small muted">Shows at the top of every staff page until you remove it.</div>
   <textarea class="inp" id="ncText" maxlength="600" style="min-height:70px" placeholder="e.g. Convoy moved to Thursday 07:00">${esc(nc ? nc.text : '')}</textarea>
   <div class="row"><span class="spacer"></span>${nc ? '<button class="btn ghost" type="button" data-act="noticeDel">Remove notice</button>' : ''}<button class="btn primary" type="submit">${nc ? 'Update notice' : 'Show notice'}</button></div></form>
@@ -1446,6 +1459,7 @@ document.addEventListener('click', e => {
   if (a === 'regDel') { if (t.dataset.confirm) db.collection('convoyReg').doc(t.dataset.id).delete().then(() => { toast('They can register again'); openSheet(regListSheet(), null, 'convoy'); }).catch(failed);
     else { t.dataset.confirm = 1; t.textContent = 'Tap again'; t.classList.add('danger'); } }
   if (a === 'noticeDel') { if (t.dataset.confirm) db.collection('convoyInfo').doc('notice').delete().then(() => toast('Notice removed')).catch(failed); else { t.dataset.confirm = 1; t.textContent = 'Tap again to remove'; t.classList.add('danger'); } return; }
+  if (a === 'mlCopy') { const v = ($('#ml' + t.dataset.v) || {}).value || ''; if (v) copyText(v, v.split(';').length + ' emails copied · ' + TRIP[t.dataset.v].name); return; }
   if (a === 'regGroup') { e.preventDefault(); history.replaceState(null, '', location.pathname + location.search); S.regDate = ''; render(); return; }
   if (a === 'grpZoom') { const x = (S.cvGroup || []).find(g => g.key === t.dataset.key), img = S.stCards[t.dataset.key];
     if (x && img) openSheet(`<div class="row" style="margin-bottom:10px"><h2 style="margin:0">${esc(x.name)}</h2><span class="spacer"></span><button class="btn ghost" data-act="close">Close</button></div><img alt="ID card of ${esc(x.name)}" src="${img}" style="width:100%;border-radius:12px"><div class="small muted" style="margin-top:8px">${esc(x.section || '')}</div>`, null, 'convoy'); }
@@ -1482,6 +1496,7 @@ document.addEventListener('change', e => {
   if (t.dataset.cvtick) { cvTick(t.dataset.cvtick, t.checked); return; }
   if (t.id === 'cvSec' && t.value === '__new') { const sel = t; cvNewSection().then(n => { sel.innerHTML = cvSecOptions(n || (cvEditing ? secOf(cvEditing) : 'ELECT.UNIT')); }); return; }
   if (t.dataset.cvcar) { cvPick(t.dataset.cvcar, t.value); return; }
+  if (t.id === 'mlDate') { S.mlDate = t.value; render(); return; }
   if (t.id === 'cvEscort') { const date = S.cvDate; if (t.value === '__new') cvNewEscort().then(n => n ? cvSetEscort(date, n) : render()); else cvSetEscort(date, t.value); return; }
   if (t.id === 'iscrFile') { const f = t.files && t.files[0]; t.value = ''; if (f) iscrLoad(f); return; }
   if (t.id === 'iscrLeader') { tripSet(cvT(), {leader: t.value}); return; }
