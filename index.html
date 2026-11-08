@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47">
+<meta name="app-version" content="v47.1">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -318,8 +318,8 @@ function isoDay(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padS
 function remember(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
 
 // only Convoy and Notes are shown on this page; the other tabs stay on the original Electrical Unit page
-const TABS = [['convoy','Convoy'],['notes','Notes'],['visits','Visits']];
-const OWNER_TABS = ['convoy', 'visits'];
+const TABS = [['convoy','Convoy'],['notes','Notes']];
+const OWNER_TABS = ['convoy'];
 const VIEWER = 'farah12+convoystaff@un.org', VIEWER_USER = 'staff';
 // each staff member signs in with their ID number (CIV228370) and its numbers as password (228370);
 // the account sits on the supervisor's own address, so nothing is ever sent to the staff member
@@ -455,7 +455,7 @@ function render(){
   const tabs = S.viewer || S.member ? TABS.filter(([k]) => k === 'convoy') : TABS.filter(([k]) => !OWNER_TABS.includes(k) || S.owner);
   if (S.user && S.loaded && !tabs.some(([k]) => k === S.tab)) S.tab = tabs[0][0];
   $('#tabs').innerHTML = ok && !S.member ? tabs.map(([k,l]) => `<button class="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${k==='orders'&&newCount()?`<span class="dot">${newCount()}</span>`:''}${k==='support'&&openSupport().length?`<span class="dot red">${openSupport().length}</span>`:''}</button>`).join('') : '';
-  const v = $('#view'); v.classList.toggle('wide', S.tab === 'attendance'); document.body.classList.toggle('full', !!((S.owner && (S.tab === 'convoy' || S.tab === 'notes' || S.tab === 'visits')) || (S.member && S.tab === 'convoy'))); const sx = v.querySelector('.scrollx')?.scrollLeft;
+  const v = $('#view'); v.classList.toggle('wide', S.tab === 'attendance'); document.body.classList.toggle('full', !!((S.owner && (S.tab === 'convoy' || S.tab === 'notes')) || (S.member && S.tab === 'convoy'))); const sx = v.querySelector('.scrollx')?.scrollLeft;
   if (!S.user) v.innerHTML = authView();
   else if (!S.user.emailVerified && !S.viewer && !S.member) v.innerHTML = verifyView();
   else if (!S.loaded) v.innerHTML = `<div class="empty"><b>Loading</b>Checking your access.</div>`;
@@ -642,12 +642,7 @@ function notesView(){
   <textarea class="inp" id="ncText" maxlength="600" style="min-height:70px" placeholder="e.g. Bring your ID card">${esc(nc ? nc.text : '')}</textarea>
   <label class="pick" style="gap:10px"><input type="checkbox" id="ncClose" ${!nc || nc.showClose ? 'checked' : ''} style="width:20px;height:20px;accent-color:var(--accent)"> <span><b>Add the registration closing date</b><br><span class="small muted">${closeLine() ? '“' + esc(closeLine()) + '”. It follows the closing date you set on the Convoy page.' : (closedLine() ? 'Staff now see in red: “' + esc(closedLine()) + '”.' : 'No registration is open now. It shows by itself when you open one.')}</span></span></label>
   <div class="row"><span class="spacer"></span>${nc ? '<button class="btn ghost" type="button" data-act="noticeDel">Remove notice</button>' : ''}<button class="btn primary" type="submit">${nc ? 'Update notice' : 'Show notice'}</button></div></form>
-  <div class="ntlayout"><form id="fNote" class="card stack ntform" style="gap:8px"><h3 style="margin:0">Note for the critical staff</h3>
-  <input class="inp" id="nTopic" maxlength="80" placeholder="Subject (optional), e.g. Convoy 05/11 open">
-  <textarea class="inp" id="nText" required maxlength="1500" placeholder="Write your note. Staff see it on their page when they sign in with their ID."></textarea>
-  <div class="row"><span class="small muted">${n} staff with an email</span><span class="spacer"></span><button class="btn" type="submit" data-mail="1">Share + email staff</button><button class="btn primary" type="submit">Share note</button></div></form>
-  <section class="stack" style="min-width:0"><p class="panelh">Shared notes · ${S.cvNotes.length}</p>
-  ${S.cvNotes.length ? `<div class="ntgrid">${S.cvNotes.map(x => noteCard(x, true)).join('')}</div>` : `<div class="empty"><b>No notes yet</b>Notes you share show on the staff page.</div>`}</section></div>`; }
+  ${visitsView()}`; }
 
 /* --- Work orders --- */
 const newCount = () => S.orders.filter(o => o.status === 'new').length;
@@ -990,6 +985,21 @@ function visitLog(){ if (visitSent || !S.member || !S.profile) return; visitSent
   try { localStorage.setItem('eu.visit.' + S.login, String(Date.now())); } catch (e) {}
   const phone = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
   db.collection('convoyVisits').add({login: S.login, key: S.profile.key || '', name: S.profile.name || '', at: Date.now(), device: phone ? 'Phone' : 'Computer'}).catch(e => console.warn(e)); }
+async function visExport(kind){ const vs = (S.visits || []).slice().sort((a, b) => b.at - a.at); if (!vs.length) { toast('No sign-ins recorded yet'); return; }
+  const byLogin = {}; S.cvStaff.forEach(s => { const l = loginOfId(s.idNo); if (l) byLogin[l] = s; });
+  const rows = vs.map(v => { const s = byLogin[v.login] || {}, d = new Date(v.at); return [fmtD(isoDay(d)), d.toTimeString().slice(0, 5), s.no || '', v.name || s.name || v.login, s.idNo || v.login.toUpperCase(), s.section || '', v.device || '']; });
+  const name = 'Staff sign-ins ' + fmtD(isoDay(new Date())).replace(/\//g, '-');
+  try { if (kind === 'xlsx') { await iscrLibs(); const wb = new ExcelJS.Workbook(), ws = wb.addWorksheet('Sign-ins');
+      ws.columns = [{header: 'Date', width: 12}, {header: 'Time', width: 8}, {header: 'No', width: 6}, {header: 'Name', width: 28}, {header: 'ID', width: 14}, {header: 'Section', width: 16}, {header: 'Device', width: 10}];
+      rows.forEach(r => ws.addRow(r)); ws.getRow(1).eachCell(c => { c.font = {bold: true, color: {argb: 'FF0B1F3F'}}; c.fill = {type: 'pattern', pattern: 'solid', fgColor: {argb: 'FFFFD21F'}}; }); ws.views = [{state: 'frozen', ySplit: 1}];
+      saveBlob(new Blob([await wb.xlsx.writeBuffer()], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), name + '.xlsx'); }
+    else { await cvLoadLibs(); const pdf = new jspdf.jsPDF({unit: 'mm', format: 'a4'}), X = [12, 34, 50, 60, 120, 150, 180]; let y = 18;
+      const headRow = () => { pdf.setFillColor(255, 210, 31); pdf.rect(10, y - 5, 190, 7, 'F'); pdf.setFont('helvetica', 'bold'); ['Date', 'Time', 'No', 'Name', 'ID', 'Section', 'Device'].forEach((t, i) => pdf.text(t, X[i], y)); pdf.setFont('helvetica', 'normal'); y += 7; };
+      pdf.setFontSize(14); pdf.setFont('helvetica', 'bold'); pdf.text('Staff sign-ins', 10, 12); pdf.setFontSize(9); pdf.setFont('helvetica', 'normal'); pdf.text('Ain Ebel - Rmeich - Debel Critical Staff · ' + rows.length + ' sign-ins · printed ' + fmtWhen(Date.now()), 200, 12, {align: 'right'}); y = 22; headRow();
+      rows.forEach(r => { if (y > 285) { pdf.addPage(); y = 15; headRow(); } r.forEach((t, i) => pdf.text(String(t).slice(0, i === 3 ? 34 : 18), X[i], y)); y += 6; });
+      saveBlob(pdf.output('blob'), name + '.pdf'); }
+    toast('Downloaded ' + name + '.' + kind); }
+  catch (e) { console.warn(e); toast('Could not export. ' + (e && e.message || '')); } }
 function visitsView(){ if (!S.owner) return '';
   if (!S.visitsOn) { S.visitsOn = true; unsubs.push(db.collection('convoyVisits').orderBy('at', 'desc').limit(3000).onSnapshot(s => { S.visits = s.docs.map(d => d.data()); render(); }, e => { console.warn(e); S.visits = []; S.visitsErr = e.code; render(); })); }
   if (!S.visits) return `<div class="empty"><b>Loading</b>Getting the visits.</div>`;
@@ -999,8 +1009,9 @@ function visitsView(){ if (!S.owner) return '';
   const seen = staff.filter(x => x.v).sort((a, b) => b.v.last - a.v.last), never = staff.filter(x => !x.v), today = isoDay(new Date());
   const days = {}; S.visits.forEach(v => { const d = isoDay(new Date(v.at)); (days[d] = days[d] || []).push(v); });
   const hm = t => new Date(t).toTimeString().slice(0, 5);
-  return `<div class="ntlayout" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
-  <section class="card stack" style="gap:8px"><div class="row"><h3 style="margin:0">Who visited</h3><span class="spacer"></span><span class="small muted">${seen.length} of ${staff.length} staff · ${S.visits.length} visits</span></div>
+  return `<div class="row" style="margin-bottom:10px"><h2 style="margin:0">Sign-ins recorded</h2><span class="spacer"></span><button class="btn sm" data-act="visExp" data-v="xlsx">Export Excel</button><button class="btn sm" data-act="visExp" data-v="pdf">Export PDF</button></div>
+  <div class="ntlayout" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+  <section class="card stack" style="gap:8px"><div class="row"><h3 style="margin:0">Who signed in</h3><span class="spacer"></span><span class="small muted">${seen.length} of ${staff.length} staff · ${S.visits.length} visits</span></div>
     <div class="rowrap"><table class="ro"><tr><th style="text-align:center">No</th><th>Name</th><th>Last visit</th><th style="text-align:center">Visits</th></tr>
     ${seen.map(({s, v}) => `<tr><td class="no">${s.no}</td><td class="nm">${esc(s.name)}</td><td>${isoDay(new Date(v.last)) === today ? '<b style="color:var(--ok)">Today</b> ' + hm(v.last) : esc(fmtWhen(v.last))}<span class="small muted"> · ${esc(v.dev || '')}</span></td><td style="text-align:center">${v.n}</td></tr>`).join('')}</table></div>
     ${never.length ? `<p class="panelh" style="margin-top:8px">Never signed in · ${never.length}</p><div class="small">${never.map(x => esc(x.s.no + '. ' + x.s.name)).join(' · ')}</div>` : ''}</section>
@@ -1511,6 +1522,7 @@ document.addEventListener('click', e => {
     else { t.dataset.confirm = 1; t.textContent = 'Tap again'; t.classList.add('danger'); } }
   if (a === 'noticeDel') { if (t.dataset.confirm) db.collection('convoyInfo').doc('notice').delete().then(() => toast('Notice removed')).catch(failed); else { t.dataset.confirm = 1; t.textContent = 'Tap again to remove'; t.classList.add('danger'); } return; }
   if (a === 'mlCopy') { const v = ($('#ml' + t.dataset.v) || {}).value || ''; if (v) copyText(v, v.split(';').length + ' emails copied · ' + TRIP[t.dataset.v].name); return; }
+  if (a === 'visExp') { visExport(t.dataset.v); return; }
   if (a === 'regGroup') { e.preventDefault(); history.replaceState(null, '', location.pathname + location.search); S.regDate = ''; render(); return; }
   if (a === 'grpZoom') { const x = (S.cvGroup || []).find(g => g.key === t.dataset.key), img = S.stCards[t.dataset.key];
     if (x && img) openSheet(`<div class="row" style="margin-bottom:10px"><h2 style="margin:0">${esc(x.name)}</h2><span class="spacer"></span><button class="btn ghost" data-act="close">Close</button></div><img alt="ID card of ${esc(x.name)}" src="${img}" style="width:100%;border-radius:12px"><div class="small muted" style="margin-top:8px">${esc(x.section || '')}</div>`, null, 'convoy'); }
