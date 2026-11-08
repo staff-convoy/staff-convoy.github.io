@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46.10">
+<meta name="app-version" content="v46.11">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1054,8 +1054,11 @@ function regView(){
   ${people}`); }
 // a small Yes / No window
 function askYesNo(q, html, safeNo){ /* safeNo: No is the highlighted answer (for removing) */ return new Promise(ok => { const w = document.createElement('div'); w.className = 'yn';
-  w.innerHTML = `<div class="ynbox" role="dialog" aria-modal="true"><h3 style="margin:0">${esc(q)}</h3><div class="small" style="margin:8px 0 16px">${html || ''}</div><div class="row" style="justify-content:flex-end;gap:10px"><button class="btn${safeNo ? ' primary' : ''}" data-yn="0">No</button><button class="btn${safeNo ? '' : ' primary'}" data-yn="1">Yes</button></div></div>`;
-  w.addEventListener('click', e => { const b = e.target.closest('[data-yn]'); if (!b && e.target !== w) return; e.stopPropagation(); w.remove(); ok(!!b && b.dataset.yn === '1'); });
+  w.innerHTML = `<div class="ynbox" role="dialog" aria-modal="true"><h3 style="margin:0">${esc(q)}</h3><div class="small" style="margin:8px 0 16px">${html || ''}</div><div class="row" style="justify-content:flex-end;gap:10px"><span class="small muted ynt" style="margin-right:auto">Closes in 5 s</span><button class="btn${safeNo ? ' primary' : ''}" data-yn="0">No</button><button class="btn${safeNo ? '' : ' primary'}" data-yn="1">Yes</button></div></div>`;
+  // no answer within 5 seconds counts as No
+  let left = 5; const tick = setInterval(() => { left--; const s = w.querySelector('.ynt'); if (s) s.textContent = 'Closes in ' + left + ' s'; if (left <= 0) done(false); }, 1000);
+  const done = y => { clearInterval(tick); if (w.isConnected) { w.remove(); ok(y); } };
+  w.addEventListener('click', e => { const b = e.target.closest('[data-yn]'); if (!b && e.target !== w) return; e.stopPropagation(); done(!!b && b.dataset.yn === '1'); });
   document.body.appendChild(w); w.querySelector(safeNo ? '[data-yn="0"]' : '[data-yn="1"]').focus(); }); }
 async function regSubmit(){ const date = S.regShown, c = S.cvConvs[date], msg = t => { const m = $('#regMsg'); if (m) m.textContent = t; };
   const dir = (document.querySelector('input[name="regDir"]:checked') || {}).value, drive = !!($('#regDrive') || {}).checked;
