@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47.4">
+<meta name="app-version" content="v47.5">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -981,10 +981,8 @@ function cvGroupSync(){ if (!S.owner || !S.cvInfoLoaded) return;
 /* --- Visits: each staff sign-in is recorded; only the supervisor reads the archive --- */
 let visitSent = false;
 function visitLog(){ if (visitSent || !S.member || !S.profile) return; visitSent = true;
-  let last = 0; try { last = Number(localStorage.getItem('eu.visit.' + S.login)) || 0; } catch (e) {}
-  if (Date.now() - last < 10 * 60000) return; // a refresh within 10 minutes is the same visit
   const phone = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
-  db.collection('convoyVisits').add({login: S.login, key: S.profile.key || '', name: S.profile.name || '', at: Date.now(), device: phone ? 'Phone' : 'Computer'}).then(() => { try { localStorage.setItem('eu.visit.' + S.login, String(Date.now())); } catch (e) {} }).catch(e => console.warn(e)); }
+  db.collection('convoyVisits').add({login: S.login, key: S.profile.key || '', name: S.profile.name || '', at: Date.now(), device: phone ? 'Phone' : 'Computer'}).catch(e => console.warn(e)); }
 async function visExport(kind){ const vs = (S.visits || []).slice().sort((a, b) => b.at - a.at); if (!vs.length) { toast('No sign-ins recorded yet'); return; }
   const byLogin = {}; S.cvStaff.forEach(s => { const l = loginOfId(s.idNo); if (l) byLogin[l] = s; });
   const rows = vs.map(v => { const s = byLogin[v.login] || {}, d = new Date(v.at); return [fmtD(isoDay(d)), d.toTimeString().slice(0, 5), s.no || '', v.name || s.name || v.login, s.idNo || v.login.toUpperCase(), s.section || '', v.device || '']; });
