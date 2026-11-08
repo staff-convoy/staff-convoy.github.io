@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46.8">
+<meta name="app-version" content="v46.9">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -260,6 +260,8 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
 .stcard.me{border-color:var(--accent)}
 .notice{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:4px;font-size:16px}
 .notice.shut{background:#d32f2f;color:#fff}
+.yn{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:100;padding:16px}
+.ynbox{background:var(--bg);border:2px solid var(--accent);border-radius:16px;padding:20px;max-width:380px;width:100%}
 .notice b{font:800 14px/1.2 var(--f-label);letter-spacing:.06em;text-transform:uppercase}
 /* the group on days with no convoy: only the ID card pictures, nothing around them */
 .grpgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
@@ -1050,12 +1052,17 @@ function regView(){
   return wrap(`<div class="card stack" style="gap:12px;border-color:var(--accent)">${head(open ? 'Registration open until ' + fmtWhen(c.closesAt) : 'Registration closed', open)}
     ${body}</div>
   ${people}`); }
+// a small Yes / No window
+function askYesNo(q, html){ return new Promise(ok => { const w = document.createElement('div'); w.className = 'yn';
+  w.innerHTML = `<div class="ynbox" role="dialog" aria-modal="true"><h3 style="margin:0">${esc(q)}</h3><div class="small" style="margin:8px 0 16px">${html || ''}</div><div class="row" style="justify-content:flex-end;gap:10px"><button class="btn" data-yn="0">No</button><button class="btn primary" data-yn="1">Yes</button></div></div>`;
+  w.addEventListener('click', e => { const b = e.target.closest('[data-yn]'); if (!b && e.target !== w) return; e.stopPropagation(); w.remove(); ok(!!b && b.dataset.yn === '1'); });
+  document.body.appendChild(w); w.querySelector('[data-yn="1"]').focus(); }); }
 async function regSubmit(){ const date = S.regShown, c = S.cvConvs[date], msg = t => { const m = $('#regMsg'); if (m) m.textContent = t; };
   const dir = (document.querySelector('input[name="regDir"]:checked') || {}).value, drive = !!($('#regDrive') || {}).checked;
   if (!dir) { msg('Choose To Naqoura or From Naqoura.'); return; }
   const only = stAllowed(date); if (only && dir !== only) { msg('You can only register ' + TRIP[only].name + ' this time.'); return; }
   if (!regOpenNow(c)) { msg('Registration is closed.'); return; }
-  if (!confirm('Register for ' + TRIP[dir].name + ' on ' + fmtD(date) + (drive ? ', and you can drive' : '') + '?\n\nYou cannot change it afterwards.')) return;
+  if (!await askYesNo('Are you sure you want to register?', `<b>${TRIP[dir].name}</b> on ${fmtD(date)}${drive ? ', and you can drive' : ''}.<br>You cannot change it afterwards.`)) return;
   const p = S.profile;
   try { await db.collection('convoyReg').doc(date + '_' + S.login).set({date, dir, canDrive: drive, login: S.login, key: p.key, no: p.no, name: p.name, idNo: p.idNo, section: p.section || '', at: Date.now(), applied: false});
     toast('✓ You are registered: ' + TRIP[dir].name); }
@@ -1442,8 +1449,8 @@ document.addEventListener('click', e => {
   if (a === 'cvUnits') { S.cvUnits = !S.cvUnits; render(); }
   if (a === 'cvAll') { const T = cvT(), people = {...tripOf(T).people}, on = t.dataset.v === '1';
     const n = S.cvStaff.filter(s => !S.cvSec || lc(secOf(s)) === lc(S.cvSec)).length;
-    if (!confirm((on ? 'Tick all ' : 'Untick all ') + n + ' staff' + (S.cvSec ? ' of ' + S.cvSec : '') + (on ? ' for ' : ' from ') + TRIP[T].name + ' on ' + fmtD(S.cvDate) + '?')) return;
-    S.cvStaff.filter(s => !S.cvSec || lc(secOf(s)) === lc(S.cvSec)).forEach(s => { if (on) people[s.key] = carOf(T, s.key); else delete people[s.key]; }); tripSet(T, {people}); }
+    askYesNo(on ? 'Tick all?' : 'Untick all?', `<b>${n} staff</b>${S.cvSec ? ' of ' + esc(S.cvSec) : ''} ${on ? 'for' : 'from'} ${TRIP[T].name} on ${fmtD(S.cvDate)}`).then(y => { if (!y) return;
+    S.cvStaff.filter(s => !S.cvSec || lc(secOf(s)) === lc(S.cvSec)).forEach(s => { if (on) people[s.key] = carOf(T, s.key); else delete people[s.key]; }); tripSet(T, {people}); }); }
   if (a === 'cvAdd') openSheet(cvForm(null), null, 'convoy');
   if (a === 'cvEdit') openSheet(cvForm(S.cvStaff.find(s => s.key === t.dataset.id)), null, 'convoy');
   if (a === 'cvRotate') cvRotate().catch(() => toast('Could not turn this picture.'));
@@ -1504,8 +1511,8 @@ function authError(err){
 document.addEventListener('change', e => {
   const t = e.target;
   if (t.dataset.cvtick) { const s = S.cvStaff.find(x => x.key === t.dataset.cvtick), nm = s ? s.name : 'this person', T = cvT();
-    if (!confirm((t.checked ? 'Add ' + nm + ' to ' : 'Remove ' + nm + ' from ') + TRIP[T].name + ' on ' + fmtD(S.cvDate) + '?')) { t.checked = !t.checked; return; }
-    cvTick(t.dataset.cvtick, t.checked); return; }
+    const key = t.dataset.cvtick, want = t.checked; t.checked = !want;
+    askYesNo(want ? 'Add to the list?' : 'Remove from the list?', `<b>${esc(nm)}</b> ${want ? 'to' : 'from'} ${TRIP[T].name} on ${fmtD(S.cvDate)}`).then(y => { if (y) { t.checked = want; cvTick(key, want); } }); return; }
   if (t.id === 'cvSec' && t.value === '__new') { const sel = t; cvNewSection().then(n => { sel.innerHTML = cvSecOptions(n || (cvEditing ? secOf(cvEditing) : 'ELECT.UNIT')); }); return; }
   if (t.dataset.cvcar) { cvPick(t.dataset.cvcar, t.value); return; }
   if (t.id === 'mlDate') { S.mlDate = t.value; render(); return; }
