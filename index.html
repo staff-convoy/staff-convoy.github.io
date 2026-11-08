@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46.7">
+<meta name="app-version" content="v46.8">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1441,6 +1441,8 @@ document.addEventListener('click', e => {
   if (a === 'cvSec') { S.cvSec = t.dataset.v; S.cvUnits = false; render(); }
   if (a === 'cvUnits') { S.cvUnits = !S.cvUnits; render(); }
   if (a === 'cvAll') { const T = cvT(), people = {...tripOf(T).people}, on = t.dataset.v === '1';
+    const n = S.cvStaff.filter(s => !S.cvSec || lc(secOf(s)) === lc(S.cvSec)).length;
+    if (!confirm((on ? 'Tick all ' : 'Untick all ') + n + ' staff' + (S.cvSec ? ' of ' + S.cvSec : '') + (on ? ' for ' : ' from ') + TRIP[T].name + ' on ' + fmtD(S.cvDate) + '?')) return;
     S.cvStaff.filter(s => !S.cvSec || lc(secOf(s)) === lc(S.cvSec)).forEach(s => { if (on) people[s.key] = carOf(T, s.key); else delete people[s.key]; }); tripSet(T, {people}); }
   if (a === 'cvAdd') openSheet(cvForm(null), null, 'convoy');
   if (a === 'cvEdit') openSheet(cvForm(S.cvStaff.find(s => s.key === t.dataset.id)), null, 'convoy');
@@ -1501,7 +1503,9 @@ function authError(err){
 }
 document.addEventListener('change', e => {
   const t = e.target;
-  if (t.dataset.cvtick) { cvTick(t.dataset.cvtick, t.checked); return; }
+  if (t.dataset.cvtick) { const s = S.cvStaff.find(x => x.key === t.dataset.cvtick), nm = s ? s.name : 'this person', T = cvT();
+    if (!confirm((t.checked ? 'Add ' + nm + ' to ' : 'Remove ' + nm + ' from ') + TRIP[T].name + ' on ' + fmtD(S.cvDate) + '?')) { t.checked = !t.checked; return; }
+    cvTick(t.dataset.cvtick, t.checked); return; }
   if (t.id === 'cvSec' && t.value === '__new') { const sel = t; cvNewSection().then(n => { sel.innerHTML = cvSecOptions(n || (cvEditing ? secOf(cvEditing) : 'ELECT.UNIT')); }); return; }
   if (t.dataset.cvcar) { cvPick(t.dataset.cvcar, t.value); return; }
   if (t.id === 'mlDate') { S.mlDate = t.value; render(); return; }
