@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46.13">
+<meta name="app-version" content="v47">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -290,7 +290,7 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
     <div class="brand">
       <span></span>
       <div class="title"><div class="team" aria-hidden="true"><svg viewBox="0 0 48 32"><circle cx="11" cy="11" r="5"/><circle cx="37" cy="11" r="5"/><path d="M1 30c0-6 4.5-10 10-10 3 0 5.5 1.2 7.2 3.2A13 13 0 0 0 15 30z"/><path d="M47 30c0-6-4.5-10-10-10-3 0-5.5 1.2-7.2 3.2A13 13 0 0 1 33 30z"/><circle cx="24" cy="9" r="6.5"/><path d="M12 31c0-7.5 5.4-13 12-13s12 5.5 12 13z"/><path class="hand" d="M17 21.5c1.6 1.8 4 2.8 7 2.8s5.4-1 7-2.8"/></svg></div>
-        <div><h1>Ain Ebel - Rmeich - Debel <span>Critical Staff</span></h1><div class="sub">Naqoura - Sector West · v46</div></div></div>
+        <div><h1>Ain Ebel - Rmeich - Debel <span>Critical Staff</span></h1><div class="sub">Naqoura - Sector West · v47</div></div></div>
       <div class="me" id="me"></div>
     </div>
     <nav class="tabs" id="tabs" aria-label="Sections"></nav>
@@ -318,8 +318,8 @@ function isoDay(d){ return d.getFullYear() + '-' + String(d.getMonth() + 1).padS
 function remember(k,v){ try{ if(v===undefined) return localStorage.getItem(k); localStorage.setItem(k,v); }catch(e){ return null; } }
 
 // only Convoy and Notes are shown on this page; the other tabs stay on the original Electrical Unit page
-const TABS = [['convoy','Convoy'],['notes','Notes']];
-const OWNER_TABS = ['convoy'];
+const TABS = [['convoy','Convoy'],['notes','Notes'],['visits','Visits']];
+const OWNER_TABS = ['convoy', 'visits'];
 const VIEWER = 'farah12+convoystaff@un.org', VIEWER_USER = 'staff';
 // each staff member signs in with their ID number (CIV228370) and its numbers as password (228370);
 // the account sits on the supervisor's own address, so nothing is ever sent to the staff member
@@ -354,7 +354,7 @@ auth.onAuthStateChanged(u => {
   unsubs.forEach(f => f()); unsubs = []; dataOn = false; cvCardsOn = false; S.cvStaff = []; S.cvCards = {}; S.cvLoaded = false;
   S.user = u; S.email = u && u.email ? u.email.toLowerCase() : ''; S.owner = !!u && u.emailVerified && S.email === OWNER; S.viewer = !!u && S.email === VIEWER;
   S.member = !!u && isStaffEmail(S.email); S.login = S.member ? S.email.slice(8, S.email.indexOf('@')) : '';
-  S.cvConvs = {}; S.cvRegs = {}; S.cvRegsLoaded = false; S.cvLogins = null; S.profile = null; S.profileLoaded = false; S.stCards = {};
+  S.cvConvs = {}; S.cvRegs = {}; S.cvRegsLoaded = false; S.visits = null; S.visitsOn = false; visitSent = false; S.cvLogins = null; S.profile = null; S.profileLoaded = false; S.stCards = {};
   S.team = {}; S.attendance = {}; S.notes = []; S.loaded = false; S.me = null;
   if (u && (u.emailVerified || S.viewer || S.member)) listen();
   render();
@@ -378,7 +378,7 @@ function listen(){
   if (S.viewer) { S.cvLoaded = true; cvListenInfo(); }
   // a staff member reads their own name card, the convoys and who registered
   if (S.member) { S.cvLoaded = true; cvListenInfo(); cvListenRegs();
-    unsubs.push(db.collection('convoyLogins').doc(S.login).onSnapshot(d => { S.profile = d.exists ? d.data() : null; S.profileLoaded = true; render(); },
+    unsubs.push(db.collection('convoyLogins').doc(S.login).onSnapshot(d => { S.profile = d.exists ? d.data() : null; S.profileLoaded = true; visitLog(); render(); },
       e => { console.warn(e); S.profileLoaded = true; render(); })); }
   if (S.owner) {
     unsubs.push(db.collection('convoyStaff').orderBy('no').onSnapshot(s => { S.cvStaff = s.docs.filter(d => typeof d.data().no === 'number').map(d => ({key:d.id, ...d.data()})); S.cvLoaded = true; cvSecMigrate(); cvLoginsSync(false); cvApplyRegs(); cvGroupSync(); render(); }, e => { console.warn(e); S.cvLoaded = true; S.cvDenied = e.code === 'permission-denied'; render(); }));
@@ -455,12 +455,12 @@ function render(){
   const tabs = S.viewer || S.member ? TABS.filter(([k]) => k === 'convoy') : TABS.filter(([k]) => !OWNER_TABS.includes(k) || S.owner);
   if (S.user && S.loaded && !tabs.some(([k]) => k === S.tab)) S.tab = tabs[0][0];
   $('#tabs').innerHTML = ok && !S.member ? tabs.map(([k,l]) => `<button class="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${k==='orders'&&newCount()?`<span class="dot">${newCount()}</span>`:''}${k==='support'&&openSupport().length?`<span class="dot red">${openSupport().length}</span>`:''}</button>`).join('') : '';
-  const v = $('#view'); v.classList.toggle('wide', S.tab === 'attendance'); document.body.classList.toggle('full', !!((S.owner && (S.tab === 'convoy' || S.tab === 'notes')) || (S.member && S.tab === 'convoy'))); const sx = v.querySelector('.scrollx')?.scrollLeft;
+  const v = $('#view'); v.classList.toggle('wide', S.tab === 'attendance'); document.body.classList.toggle('full', !!((S.owner && (S.tab === 'convoy' || S.tab === 'notes' || S.tab === 'visits')) || (S.member && S.tab === 'convoy'))); const sx = v.querySelector('.scrollx')?.scrollLeft;
   if (!S.user) v.innerHTML = authView();
   else if (!S.user.emailVerified && !S.viewer && !S.member) v.innerHTML = verifyView();
   else if (!S.loaded) v.innerHTML = `<div class="empty"><b>Loading</b>Checking your access.</div>`;
   else if (!allowed()) v.innerHTML = `<div class="gate stack"><h2>${S.me ? 'Access removed' : 'Not approved yet'}</h2><p class="muted">${S.me ? 'The supervisor has removed your access.' : 'Ask the supervisor to add <b>'+esc(S.email)+'</b> to the team. This page opens as soon as they do.'}</p></div>`;
-  else v.innerHTML = ({orders:ordersView, support:supportView, kwh:kwhView, attendance:attView, notes:notesView, convoy:S.member ? regView : convoyView, team:teamView})[S.tab]();
+  else v.innerHTML = ({orders:ordersView, support:supportView, kwh:kwhView, attendance:attView, notes:notesView, visits:visitsView, convoy:S.member ? regView : convoyView, team:teamView})[S.tab]();
   if (S.tab === 'convoy') cvListenCards();
   fitAtt();
   if (sx) { const el = v.querySelector('.scrollx'); if (el) el.scrollLeft = sx; }
@@ -982,6 +982,31 @@ function cvGroupSync(){ if (!S.owner || !S.cvInfoLoaded) return;
   const list = S.cvStaff.map(s => ({key: s.key, no: s.no, name: s.name || '', idNo: s.idNo || '', section: s.section || ''}));
   if (JSON.stringify(list) === JSON.stringify(S.cvGroup || null)) return; S.cvGroup = list;
   db.collection('convoyInfo').doc('group').set({kind: 'group', list}).catch(e => console.warn(e)); }
+/* --- Visits: each staff sign-in is recorded; only the supervisor reads the archive --- */
+let visitSent = false;
+function visitLog(){ if (visitSent || !S.member || !S.profile) return; visitSent = true;
+  let last = 0; try { last = Number(localStorage.getItem('eu.visit.' + S.login)) || 0; } catch (e) {}
+  if (Date.now() - last < 10 * 60000) return; // a refresh within 10 minutes is the same visit
+  try { localStorage.setItem('eu.visit.' + S.login, String(Date.now())); } catch (e) {}
+  const phone = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  db.collection('convoyVisits').add({login: S.login, key: S.profile.key || '', name: S.profile.name || '', at: Date.now(), device: phone ? 'Phone' : 'Computer'}).catch(e => console.warn(e)); }
+function visitsView(){ if (!S.owner) return '';
+  if (!S.visitsOn) { S.visitsOn = true; unsubs.push(db.collection('convoyVisits').orderBy('at', 'desc').limit(3000).onSnapshot(s => { S.visits = s.docs.map(d => d.data()); render(); }, e => { console.warn(e); S.visits = []; S.visitsErr = e.code; render(); })); }
+  if (!S.visits) return `<div class="empty"><b>Loading</b>Getting the visits.</div>`;
+  if (S.visitsErr === 'permission-denied') return `<div class="empty"><b>Visits are not switched on yet</b>Paste the new database rules in Firebase first.</div>`;
+  const per = {}; S.visits.forEach(v => { const k = v.login; if (!per[k]) per[k] = {n: 0, last: v.at, dev: v.device}; per[k].n++; });
+  const staff = S.cvStaff.filter(s => loginOfId(s.idNo)).map(s => ({s, v: per[loginOfId(s.idNo)]}));
+  const seen = staff.filter(x => x.v).sort((a, b) => b.v.last - a.v.last), never = staff.filter(x => !x.v), today = isoDay(new Date());
+  const days = {}; S.visits.forEach(v => { const d = isoDay(new Date(v.at)); (days[d] = days[d] || []).push(v); });
+  const hm = t => new Date(t).toTimeString().slice(0, 5);
+  return `<div class="ntlayout" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
+  <section class="card stack" style="gap:8px"><div class="row"><h3 style="margin:0">Who visited</h3><span class="spacer"></span><span class="small muted">${seen.length} of ${staff.length} staff · ${S.visits.length} visits</span></div>
+    <div class="rowrap"><table class="ro"><tr><th style="text-align:center">No</th><th>Name</th><th>Last visit</th><th style="text-align:center">Visits</th></tr>
+    ${seen.map(({s, v}) => `<tr><td class="no">${s.no}</td><td class="nm">${esc(s.name)}</td><td>${isoDay(new Date(v.last)) === today ? '<b style="color:var(--ok)">Today</b> ' + hm(v.last) : esc(fmtWhen(v.last))}<span class="small muted"> · ${esc(v.dev || '')}</span></td><td style="text-align:center">${v.n}</td></tr>`).join('')}</table></div>
+    ${never.length ? `<p class="panelh" style="margin-top:8px">Never signed in · ${never.length}</p><div class="small">${never.map(x => esc(x.s.no + '. ' + x.s.name)).join(' · ')}</div>` : ''}</section>
+  <section class="card stack" style="gap:8px"><h3 style="margin:0">Archive · every sign-in</h3>
+    ${Object.keys(days).length ? Object.keys(days).sort().reverse().map(d => `<p class="panelh" style="margin-top:6px">${DAYS[new Date(d + 'T12:00').getDay()]} ${fmtD(d)} · ${days[d].length}</p>
+      ${days[d].map(v => `<div class="small" style="display:flex;gap:10px"><span style="font-family:var(--f-mono);min-width:44px">${hm(v.at)}</span><span style="flex:1">${esc(v.name || v.login)}</span><span class="muted">${esc(v.device || '')}</span></div>`).join('')}`).join('') : '<div class="empty small">No visits recorded yet. They appear as soon as staff sign in.</div>'}</section></div>`; }
 /* --- What a staff member sees: register once, then a locked view of the convoy, without cars or drivers --- */
 const tripRank = (date, T) => date + (T === 'FROM' ? '1' : '0');
 function stLastTrip(before){ const key = S.profile.key; let best = null;
