@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46.6">
+<meta name="app-version" content="v46.7">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1160,7 +1160,7 @@ function cvOwnerView(){
       <div class="row"><h2 style="margin:0">${DAYS[dt.getDay()]} ${fmtD(S.cvDate)}</h2><span class="spacer"></span><span style="font-family:var(--f-mono)"><b>${on}</b> of ${list.length} staff</span></div>
       <div class="seg">${['TO','FROM'].map(X => `<button data-act="cvTrip" data-v="${X}" aria-pressed="${T === X}">${TRIP[X].name} · ${dayCount(S.cvDate, X)}</button>`).join('')}</div>
       <div class="row"><span class="small muted" style="flex:1;min-width:200px">${TRIP[T].route} · escorted by the ${esc(escortName(S.cvDate))}.${ed ? ' Tick who travels and put them in a car.' : ''}</span>
-        ${ed && lastConvoy(S.cvDate) ? `<button class="btn sm" data-act="cvRotation" title="Adds everyone who was ${T === 'TO' ? 'From' : 'To'} Naqoura on the last convoy">↺ Add ${T === 'TO' ? 'From' : 'To'} Naqoura of ${fmtD(lastConvoy(S.cvDate)).slice(0, 5)}</button>` : ''}</div>
+        </div>
       ${upcoming().length ? `<div class="row small" style="gap:6px"><b class="panelh" style="font-size:12px">Upcoming convoys</b>${upcoming().map(d => { const dd = new Date(d + 'T12:00'), n = convoyNo(d);
         return `<button class="car" data-act="cvDay" data-v="${d}" aria-pressed="${d === S.cvDate}">${DAYS[dd.getDay()].slice(0, 3)} ${fmtD(d).slice(0, 5)}${n ? ' · No. ' + n : ''} · ${esc(escortOf(d))}</button>`; }).join('')}</div>` : ''}
       ${ed ? '' : pastView(T)}</div>
