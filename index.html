@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46.12">
+<meta name="app-version" content="v46.13">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -262,6 +262,7 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
 .notice.shut{background:#d32f2f;color:#fff}
 .yn{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:100;padding:16px}
 .ynbox{background:var(--bg);border:2px solid var(--accent);border-radius:16px;padding:20px;max-width:380px;width:100%}
+.plate{background:var(--accent);color:var(--accent-ink);font:800 13px/1 var(--f-mono);padding:5px 8px;border-radius:6px;white-space:nowrap}
 .notice b{font:800 14px/1.2 var(--f-label);letter-spacing:.06em;text-transform:uppercase}
 /* the group on days with no convoy: only the ID card pictures, nothing around them */
 .grpgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
@@ -1004,7 +1005,7 @@ function stCard(x, cls){ const img = S.stCards[x.key];
   if (img === undefined) { S.stCards[x.key] = null; db.collection('convoyCards').doc(x.key).get().then(d => { S.stCards[x.key] = d.exists && d.data().img || ''; render(); }).catch(() => { S.stCards[x.key] = ''; render(); }); }
   return `<div class="card stcard ${cls || ''} ${S.profile && x.key === S.profile.key ? 'me' : ''}"><div class="row" style="gap:8px;flex-wrap:nowrap"><span class="cvno">${x.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(x.name)}</span><br><span class="small muted" style="font-family:var(--f-mono)">${esc(x.idNo || '')}</span></span></div>
   <div class="cvthumb">${img ? `<img alt="ID card of ${esc(x.name)}" src="${img}">` : img === '' ? 'No ID card' : 'Loading picture…'}</div>
-  <span class="cvsecname" style="text-align:left">${esc(x.section || '')}</span></div>`; }
+  <div class="row" style="gap:6px"><span class="cvsecname" style="text-align:left">${esc(x.section || '')}</span><span class="spacer"></span>${x.plate ? `<span class="plate">🚗 ${esc(x.plate)}</span>` : ''}</div></div>`; }
 function regView(){
   if (!S.profileLoaded || !S.cvInfoLoaded || !S.cvRegsLoaded) return `<div class="empty"><b>Loading</b>Getting the convoy.</div>`;
   if (!S.profile) return `<div class="gate stack"><h2>Login not linked</h2><p class="muted">The ID <b>${esc(S.login.toUpperCase())}</b> is not on the convoy staff list. Ask the supervisor.</p></div>`;
@@ -1030,7 +1031,7 @@ function regView(){
       ${g.length ? `<div class="grpgrid">${g.map(grpCard).join('')}</div>` : '<div class="empty small">The staff list is not ready yet.</div>'}`); }
   const dt = new Date(date + 'T12:00'), no = convoyNo(date), conv = isConvoy(date), c = S.cvConvs[date];
   const people = `<div class="stack">${['TO', 'FROM'].map(T => { const l = stPeople(date, T);
-      return `<h3 class="sechead">${TRIP[T].name} <span>${l.length} staff</span></h3>${l.length ? `<div class="stgrid">${l.map(stCard).join('')}</div>` : '<div class="empty small">Nobody.</div>'}`; }).join('')}</div>`;
+      return `<h3 class="sechead">${TRIP[T].name} <span>${l.length} staff</span></h3>${l.length ? `<div class="stgrid">${l.map(x => { const r = recOf(date, T), v = r && r.people ? r.people[x.key] : ''; return stCard({...x, plate: typeof v === 'string' ? v : ''}); }).join('')}</div>` : '<div class="empty small">Nobody.</div>'}`; }).join('')}</div>`;
   const head = (status, ok) => `<div class="row"><h2 style="margin:0">Convoy ${DAYS[dt.getDay()]} ${fmtD(date)}</h2>${no ? `<b class="cvconv" style="font-size:14px">No. ${no}</b>` : ''}<span class="spacer"></span><span class="st ${ok ? 'ok' : 'no'}">${status}</span></div>
     <div class="small muted">${esc(S.profile.name)} · ${esc(S.profile.idNo)}${conv ? ' · escorted by the ' + esc(escortName(date)) : ''}</div>`;
   if (!conv) return wrap(`<div class="card stack" style="gap:8px"><h2 style="margin:0">${DAYS[dt.getDay()]} ${fmtD(date)}</h2><div class="empty small">No convoy on this date. Choose a yellow date in the calendar.</div></div>`);
@@ -1038,10 +1039,10 @@ function regView(){
   if (date < today || !c) { const key = S.profile.key, myT = ['TO', 'FROM'].find(T => stPeople(date, T).some(x => x.key === key));
     const past = date < today;
     return wrap(`<div class="card stack" style="gap:10px;border-color:var(--accent)">${head(past ? 'Past convoy · view only' : 'Registration not open yet', false)}
-      <div class="small">${myT ? `✓ You ${past ? 'travelled' : 'are on the list'}: <b>${TRIP[myT].name}</b>` : `You ${past ? 'were' : 'are'} not on this convoy.`}</div>${myT ? myCarLine(date, myT) : ''}</div>${people}`); }
+      <div class="small">${myT ? `✓ You ${past ? 'travelled' : 'are on the list'}: <b>${TRIP[myT].name}</b>` : `You ${past ? 'were' : 'are'} not on this convoy.`}</div></div>${people}`); }
   const mine = S.cvRegs[date + '_' + S.login], open = regOpenNow(c);
   let body;
-  if (mine) body = `<div class="regdone">✓ You are registered: <b>${esc(TRIP[mine.dir].name)}</b><div class="small muted" style="margin-top:4px">${esc(TRIP[mine.dir].route)}</div>${myCarLine(date, mine.dir) || '<div class="small" style="margin-top:6px">🚗 Your car is not assigned yet</div>'}</div>
+  if (mine) body = `<div class="regdone">✓ You are registered: <b>${esc(TRIP[mine.dir].name)}</b><div class="small muted" style="margin-top:4px">${esc(TRIP[mine.dir].route)}</div></div>
     <p class="small muted" style="margin:0">🔒 Your registration is locked. For any change, contact the supervisor.</p>`;
   else if (open) { const only = stAllowed(date), last = stLastTrip(date);
     body = `<form id="fReg" class="stack" style="gap:12px"><h3 style="margin:0">Choose your trip</h3>
@@ -1052,7 +1053,7 @@ function regView(){
     <button class="btn primary" type="submit">Register</button>
     <p class="small muted" style="margin:0">You can register only once. After that the page is view only.</p></form>`; }
   else { const myT = ['TO', 'FROM'].find(T => myCar(date, T) !== null);
-    body = myT ? `<div class="regdone">✓ The supervisor put you on: <b>${esc(TRIP[myT].name)}</b><div class="small muted" style="margin-top:4px">${esc(TRIP[myT].route)}</div>${myCarLine(date, myT)}</div>`
+    body = myT ? `<div class="regdone">✓ The supervisor put you on: <b>${esc(TRIP[myT].name)}</b><div class="small muted" style="margin-top:4px">${esc(TRIP[myT].route)}</div></div>`
       : `<div class="empty"><b>Registration is closed</b>You did not register for this convoy. For any change, contact the supervisor.</div>`; }
   return wrap(`<div class="card stack" style="gap:12px;border-color:var(--accent)">${head(open ? 'Registration open until ' + fmtWhen(c.closesAt) : 'Registration closed', open)}
     ${body}</div>
