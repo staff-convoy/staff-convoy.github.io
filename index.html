@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47.5">
+<meta name="app-version" content="v47.6">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -999,7 +999,7 @@ async function visExport(kind){ const vs = (S.visits || []).slice().sort((a, b) 
     toast('Downloaded ' + name + '.' + kind); }
   catch (e) { console.warn(e); toast('Could not export. ' + (e && e.message || '')); } }
 function visitsView(){ if (!S.owner) return '';
-  if (!S.visitsOn) { S.visitsOn = true; unsubs.push(db.collection('convoyVisits').orderBy('at', 'desc').limit(3000).onSnapshot(s => { S.visits = s.docs.map(d => d.data()); render(); }, e => { console.warn(e); S.visits = []; S.visitsErr = e.code; render(); })); }
+  if (!S.visitsOn) { S.visitsOn = true; unsubs.push(db.collection('convoyVisits').orderBy('at', 'desc').limit(3000).onSnapshot(s => { S.visits = s.docs.map(d => ({id: d.id, ...d.data()})); render(); }, e => { console.warn(e); S.visits = []; S.visitsErr = e.code; render(); })); }
   if (!S.visits) return `<div class="empty"><b>Loading</b>Getting the visits.</div>`;
   if (S.visitsErr === 'permission-denied') return `<div class="empty"><b>Visits are not switched on yet</b>Paste the new database rules in Firebase first.</div>`;
   const per = {}; S.visits.forEach(v => { const k = v.login; if (!per[k]) per[k] = {n: 0, last: v.at, dev: v.device}; per[k].n++; });
@@ -1007,7 +1007,7 @@ function visitsView(){ if (!S.owner) return '';
   const seen = staff.filter(x => x.v).sort((a, b) => b.v.last - a.v.last), never = staff.filter(x => !x.v), today = isoDay(new Date());
   const days = {}; S.visits.forEach(v => { const d = isoDay(new Date(v.at)); (days[d] = days[d] || []).push(v); });
   const hm = t => new Date(t).toTimeString().slice(0, 5);
-  return `<div class="row" style="margin-bottom:10px"><h2 style="margin:0">Sign-ins recorded</h2><span class="spacer"></span><button class="btn sm" data-act="visExp" data-v="xlsx">Export Excel</button><button class="btn sm" data-act="visExp" data-v="pdf">Export PDF</button></div>
+  return `<div class="row" style="margin-bottom:10px"><h2 style="margin:0">Sign-ins recorded</h2><span class="spacer"></span><button class="btn sm" data-act="visExp" data-v="xlsx">Export Excel</button><button class="btn sm" data-act="visExp" data-v="pdf">Export PDF</button><button class="btn sm ghost" data-act="visDel">Delete archive</button></div>
   <div class="ntlayout" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr)">
   <section class="card stack" style="gap:8px"><div class="row"><h3 style="margin:0">Who signed in</h3><span class="spacer"></span><span class="small muted">${seen.length} of ${staff.length} staff · ${S.visits.length} visits</span></div>
     <div class="rowrap"><table class="ro"><tr><th style="text-align:center">No</th><th>Name</th><th>Last visit</th><th style="text-align:center">Visits</th></tr>
@@ -1528,6 +1528,9 @@ document.addEventListener('click', e => {
   if (a === 'noticeDel') { if (t.dataset.confirm) db.collection('convoyInfo').doc('notice').delete().then(() => toast('Notice removed')).catch(failed); else { t.dataset.confirm = 1; t.textContent = 'Tap again to remove'; t.classList.add('danger'); } return; }
   if (a === 'mlCopy') { const v = ($('#ml' + t.dataset.v) || {}).value || ''; if (v) copyText(v, v.split(';').length + ' emails copied · ' + TRIP[t.dataset.v].name); return; }
   if (a === 'visExp') { visExport(t.dataset.v); return; }
+  if (a === 'visDel') { const vs = S.visits || []; if (!vs.length) { toast('The archive is already empty'); return; }
+    askYesNo('Delete the whole archive?', `All <b>${vs.length} sign-ins</b> will be deleted for good. Export to Excel or PDF first if you want to keep a copy.`, true).then(async y => { if (!y) return;
+      try { for (let i = 0; i < vs.length; i += 400) { const b = db.batch(); vs.slice(i, i + 400).forEach(v => b.delete(db.collection('convoyVisits').doc(v.id))); await b.commit(); } toast('Archive deleted'); } catch (e) { failed(e); } }); return; }
   if (a === 'regGroup') { e.preventDefault(); history.replaceState(null, '', location.pathname + location.search); S.regDate = ''; render(); return; }
   if (a === 'grpZoom') { const x = (S.cvGroup || []).find(g => g.key === t.dataset.key), img = S.stCards[t.dataset.key];
     if (x && img) openSheet(`<div class="row" style="margin-bottom:10px"><h2 style="margin:0">${esc(x.name)}</h2><span class="spacer"></span><button class="btn ghost" data-act="close">Close</button></div><img alt="ID card of ${esc(x.name)}" src="${img}" style="width:100%;border-radius:12px"><div class="small muted" style="margin-top:8px">${esc(x.section || '')}</div>`, null, 'convoy'); }
