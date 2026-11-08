@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46.3">
+<meta name="app-version" content="v46.4">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1012,7 +1012,7 @@ function regView(){
   const side = `<aside class="stside stack" style="gap:8px"><p class="panelh">All convoys</p>${calView('regPick')}
     ${list.length ? `<div class="small"><b>Open for registration:</b> ${list.map(x => `<a href="#reg=${x.date}">${fmtD(x.date)}</a>`).join(', ')}</div>` : ''}</aside>`;
   const back = S.regDate && isConvoy(S.regDate) ? `<a class="btn sm" href="#" data-act="regGroup" style="align-self:flex-start">← All the group</a>` : '';
-  const nb = S.cvNotice ? `<div class="notice"><b>📢 Notice</b>${S.cvNotice.text.trim() ? `<div style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(S.cvNotice.text)}</div>` : ''}${S.cvNotice.showClose && closeLine() ? `<div style="font-weight:700">⏰ ${esc(closeLine())}</div>` : ''}<div class="small" style="opacity:.75">${esc(fmtWhen(S.cvNotice.at))}</div></div>` : '';
+  const nb = S.cvNotice ? `<div class="notice"><b>📢 Notice</b>${S.cvNotice.text.trim() ? `<div style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(S.cvNotice.text)}</div>` : ''}${S.cvNotice.showClose && closeLine() ? `<div style="font-weight:700">⏰ ${esc(closeLine())}</div>` : ''}</div>` : '';
   const wrap = inner => `${nb}<div class="stlayout">${side}<section class="stack" style="min-width:0">${back}${inner}${notesHtml}</section></div>`;
   if (!date) { const g = (S.cvGroup || []).slice().sort(bySection), nextUp = all.filter(d => d > today)[0];
     return wrap(`<div class="card stack" style="gap:6px;border-color:var(--accent)"><div class="row"><h2 style="margin:0">Our group</h2><span class="spacer"></span><span class="st no">No convoy today</span></div>
