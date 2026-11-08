@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46.9">
+<meta name="app-version" content="v46.10">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1053,10 +1053,10 @@ function regView(){
     ${body}</div>
   ${people}`); }
 // a small Yes / No window
-function askYesNo(q, html){ return new Promise(ok => { const w = document.createElement('div'); w.className = 'yn';
-  w.innerHTML = `<div class="ynbox" role="dialog" aria-modal="true"><h3 style="margin:0">${esc(q)}</h3><div class="small" style="margin:8px 0 16px">${html || ''}</div><div class="row" style="justify-content:flex-end;gap:10px"><button class="btn" data-yn="0">No</button><button class="btn primary" data-yn="1">Yes</button></div></div>`;
+function askYesNo(q, html, safeNo){ /* safeNo: No is the highlighted answer (for removing) */ return new Promise(ok => { const w = document.createElement('div'); w.className = 'yn';
+  w.innerHTML = `<div class="ynbox" role="dialog" aria-modal="true"><h3 style="margin:0">${esc(q)}</h3><div class="small" style="margin:8px 0 16px">${html || ''}</div><div class="row" style="justify-content:flex-end;gap:10px"><button class="btn${safeNo ? ' primary' : ''}" data-yn="0">No</button><button class="btn${safeNo ? '' : ' primary'}" data-yn="1">Yes</button></div></div>`;
   w.addEventListener('click', e => { const b = e.target.closest('[data-yn]'); if (!b && e.target !== w) return; e.stopPropagation(); w.remove(); ok(!!b && b.dataset.yn === '1'); });
-  document.body.appendChild(w); w.querySelector('[data-yn="1"]').focus(); }); }
+  document.body.appendChild(w); w.querySelector(safeNo ? '[data-yn="0"]' : '[data-yn="1"]').focus(); }); }
 async function regSubmit(){ const date = S.regShown, c = S.cvConvs[date], msg = t => { const m = $('#regMsg'); if (m) m.textContent = t; };
   const dir = (document.querySelector('input[name="regDir"]:checked') || {}).value, drive = !!($('#regDrive') || {}).checked;
   if (!dir) { msg('Choose To Naqoura or From Naqoura.'); return; }
@@ -1449,7 +1449,7 @@ document.addEventListener('click', e => {
   if (a === 'cvUnits') { S.cvUnits = !S.cvUnits; render(); }
   if (a === 'cvAll') { const T = cvT(), people = {...tripOf(T).people}, on = t.dataset.v === '1';
     const n = S.cvStaff.filter(s => !S.cvSec || lc(secOf(s)) === lc(S.cvSec)).length;
-    askYesNo(on ? 'Tick all?' : 'Untick all?', `<b>${n} staff</b>${S.cvSec ? ' of ' + esc(S.cvSec) : ''} ${on ? 'for' : 'from'} ${TRIP[T].name} on ${fmtD(S.cvDate)}`).then(y => { if (!y) return;
+    askYesNo(on ? 'Tick all?' : 'Untick all?', `<b>${n} staff</b>${S.cvSec ? ' of ' + esc(S.cvSec) : ''} ${on ? 'for' : 'from'} ${TRIP[T].name} on ${fmtD(S.cvDate)}`, !on).then(y => { if (!y) return;
     S.cvStaff.filter(s => !S.cvSec || lc(secOf(s)) === lc(S.cvSec)).forEach(s => { if (on) people[s.key] = carOf(T, s.key); else delete people[s.key]; }); tripSet(T, {people}); }); }
   if (a === 'cvAdd') openSheet(cvForm(null), null, 'convoy');
   if (a === 'cvEdit') openSheet(cvForm(S.cvStaff.find(s => s.key === t.dataset.id)), null, 'convoy');
@@ -1512,7 +1512,7 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (t.dataset.cvtick) { const s = S.cvStaff.find(x => x.key === t.dataset.cvtick), nm = s ? s.name : 'this person', T = cvT();
     const key = t.dataset.cvtick, want = t.checked; t.checked = !want;
-    askYesNo(want ? 'Add to the list?' : 'Remove from the list?', `<b>${esc(nm)}</b> ${want ? 'to' : 'from'} ${TRIP[T].name} on ${fmtD(S.cvDate)}`).then(y => { if (y) { t.checked = want; cvTick(key, want); } }); return; }
+    askYesNo(want ? 'Add to the list?' : 'Remove from the list?', `<b>${esc(nm)}</b> ${want ? 'to' : 'from'} ${TRIP[T].name} on ${fmtD(S.cvDate)}`, !want).then(y => { if (y) { t.checked = want; cvTick(key, want); } }); return; }
   if (t.id === 'cvSec' && t.value === '__new') { const sel = t; cvNewSection().then(n => { sel.innerHTML = cvSecOptions(n || (cvEditing ? secOf(cvEditing) : 'ELECT.UNIT')); }); return; }
   if (t.dataset.cvcar) { cvPick(t.dataset.cvcar, t.value); return; }
   if (t.id === 'mlDate') { S.mlDate = t.value; render(); return; }
