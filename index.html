@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v46.11">
+<meta name="app-version" content="v46.12">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -990,6 +990,9 @@ function stLastTrip(before){ const key = S.profile.key; let best = null;
   return best; }
 // last trip To Naqoura: this time only From Naqoura, and the other way round; no trip yet: free choice
 const stAllowed = before => { const l = stLastTrip(before); return l ? (l.dir === 'TO' ? 'FROM' : 'TO') : ''; };
+// the car the supervisor put this staff member in (only their own)
+const myCar = (date, T) => { const r = recOf(date, T), k = S.profile && S.profile.key; const v = r && k && r.people ? r.people[k] : null; return typeof v === 'string' ? v : null; };
+const myCarLine = (date, T) => { const c = myCar(date, T); return c === null ? '' : `<div class="small" style="margin-top:6px">🚗 ${c ? 'Your car: <b>' + esc(c) + '</b>' : 'Your car is not assigned yet'}</div>`; };
 function stPeople(date, T){ const r = recOf(date, T), out = [], seen = new Set();
   (r && r.staff || []).forEach(x => { if (typeof r.people[x.key] === 'string' && !seen.has(x.key)) { seen.add(x.key); out.push(x); } });
   Object.values(S.cvRegs).forEach(g => { if (g.date === date && g.dir === T && !g.applied && !seen.has(g.key)) { seen.add(g.key); out.push({key: g.key, no: g.no, name: g.name, idNo: g.idNo, section: g.section}); } });
@@ -1035,10 +1038,10 @@ function regView(){
   if (date < today || !c) { const key = S.profile.key, myT = ['TO', 'FROM'].find(T => stPeople(date, T).some(x => x.key === key));
     const past = date < today;
     return wrap(`<div class="card stack" style="gap:10px;border-color:var(--accent)">${head(past ? 'Past convoy · view only' : 'Registration not open yet', false)}
-      <div class="small">${myT ? `✓ You ${past ? 'travelled' : 'are on the list'}: <b>${TRIP[myT].name}</b>` : `You ${past ? 'were' : 'are'} not on this convoy.`}</div></div>${people}`); }
+      <div class="small">${myT ? `✓ You ${past ? 'travelled' : 'are on the list'}: <b>${TRIP[myT].name}</b>` : `You ${past ? 'were' : 'are'} not on this convoy.`}</div>${myT ? myCarLine(date, myT) : ''}</div>${people}`); }
   const mine = S.cvRegs[date + '_' + S.login], open = regOpenNow(c);
   let body;
-  if (mine) body = `<div class="regdone">✓ You are registered: <b>${esc(TRIP[mine.dir].name)}</b><div class="small muted" style="margin-top:4px">${esc(TRIP[mine.dir].route)}</div></div>
+  if (mine) body = `<div class="regdone">✓ You are registered: <b>${esc(TRIP[mine.dir].name)}</b><div class="small muted" style="margin-top:4px">${esc(TRIP[mine.dir].route)}</div>${myCarLine(date, mine.dir) || '<div class="small" style="margin-top:6px">🚗 Your car is not assigned yet</div>'}</div>
     <p class="small muted" style="margin:0">🔒 Your registration is locked. For any change, contact the supervisor.</p>`;
   else if (open) { const only = stAllowed(date), last = stLastTrip(date);
     body = `<form id="fReg" class="stack" style="gap:12px"><h3 style="margin:0">Choose your trip</h3>
@@ -1048,7 +1051,9 @@ function regView(){
     <div class="err" id="regMsg"></div>
     <button class="btn primary" type="submit">Register</button>
     <p class="small muted" style="margin:0">You can register only once. After that the page is view only.</p></form>`; }
-  else body = `<div class="empty"><b>Registration is closed</b>You did not register for this convoy. For any change, contact the supervisor.</div>`;
+  else { const myT = ['TO', 'FROM'].find(T => myCar(date, T) !== null);
+    body = myT ? `<div class="regdone">✓ The supervisor put you on: <b>${esc(TRIP[myT].name)}</b><div class="small muted" style="margin-top:4px">${esc(TRIP[myT].route)}</div>${myCarLine(date, myT)}</div>`
+      : `<div class="empty"><b>Registration is closed</b>You did not register for this convoy. For any change, contact the supervisor.</div>`; }
   return wrap(`<div class="card stack" style="gap:12px;border-color:var(--accent)">${head(open ? 'Registration open until ' + fmtWhen(c.closesAt) : 'Registration closed', open)}
     ${body}</div>
   ${people}`); }
