@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47.16">
+<meta name="app-version" content="v47.17">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -180,7 +180,10 @@ label.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-
 .cvcard .pick{display:flex;align-items:center;gap:10px;cursor:pointer;min-width:0}
 .cvcard .pick input{width:24px;height:24px;flex:none;accent-color:var(--ok);cursor:pointer}
 .cvno{font:800 22px/1 var(--f-label);font-variant-numeric:tabular-nums;min-width:30px;color:var(--accent)}
-.cvcard .nmx{font-weight:600;overflow-wrap:anywhere;line-height:1.2}
+.cvcard .nmx{font-weight:600;line-height:1.25}
+.nmx{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cvthumb{position:relative}.cvthumb>.idtag{position:absolute;left:6px;bottom:6px}
+.cvcard .cvcar{margin-top:auto}
 .cvthumb,.cvprev{aspect-ratio:85.6/54;background:var(--sunk);border-radius:8px;overflow:hidden;display:grid;place-items:center;color:var(--muted);font-size:13px}
 .cvthumb img,.cvprev img{width:100%;height:100%;object-fit:contain}
 .cvprev{max-width:340px;width:100%}
@@ -477,6 +480,10 @@ document.addEventListener('focusout', () => setTimeout(() => { if (pending && !t
 function fitAtt(){ const el = document.querySelector('.attwrap'); if (!el) return;
   const top = el.getBoundingClientRect().top + window.scrollY; el.style.maxHeight = Math.max(280, window.innerHeight - top - 16) + 'px'; }
 window.addEventListener('resize', fitAtt);
+/* long names: shrink the font until the name fits on one line */
+function fitNames(){ document.querySelectorAll('.nmx').forEach(el => { el.style.fontSize = ''; if (el.scrollWidth <= el.clientWidth) return;
+  let f = parseFloat(getComputedStyle(el).fontSize); while (el.scrollWidth > el.clientWidth && f > 10) { f -= .5; el.style.fontSize = f + 'px'; } }); }
+let fitT; addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeout(fitNames, 150); });
 function render(){
   document.title = 'Critical Staff';
   if (typing()) { pending = true; return; }
@@ -492,7 +499,7 @@ function render(){
   else if (!allowed()) v.innerHTML = `<div class="gate stack"><h2>${S.me ? 'Access removed' : 'Not approved yet'}</h2><p class="muted">${S.me ? 'The supervisor has removed your access.' : 'Ask the supervisor to add <b>'+esc(S.email)+'</b> to the team. This page opens as soon as they do.'}</p></div>`;
   else v.innerHTML = ({orders:ordersView, support:supportView, kwh:kwhView, attendance:attView, notes:notesView, visits:visitsView, convoy:S.member ? regView : convoyView, team:teamView})[S.tab]();
   if (S.tab === 'convoy') cvListenCards();
-  fitAtt();
+  fitAtt(); fitNames();
   if (sx) { const el = v.querySelector('.scrollx'); if (el) el.scrollLeft = sx; }
 }
 
@@ -1081,7 +1088,7 @@ function stByCar(date, T, l){ const r = recOf(date, T), plateOf = k => { const v
   return [...plates, ...(groups[''] ? [''] : [])].map(pl => `<div class="carhead">${pl ? '🚗 <b>' + esc(pl) + '</b>' : '<b>No car yet</b>'}<span class="small muted">${groups[pl].length} staff</span></div><div class="stgrid">${groups[pl].map(x => stCard(x)).join('')}</div>`).join(''); }
 function stCard(x, cls){ const img = S.stCards[x.key];
   if (img === undefined) { S.stCards[x.key] = null; db.collection('convoyCards').doc(x.key).get().then(d => { S.stCards[x.key] = d.exists && d.data().img || ''; render(); }).catch(() => { S.stCards[x.key] = ''; render(); }); }
-  return `<div class="card stcard ${cls || ''} ${S.profile && x.key === S.profile.key ? 'me' : ''}"><div class="row" style="gap:8px;flex-wrap:nowrap"><span class="cvno">${x.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(x.name)}</span><br><span class="small muted" style="font-family:var(--f-mono)">${esc(x.idNo || '')}</span></span></div>
+  return `<div class="card stcard ${cls || ''} ${S.profile && x.key === S.profile.key ? 'me' : ''}"><div class="row" style="gap:8px;flex-wrap:nowrap"><span class="cvno">${x.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(x.name)}</span><span class="small muted" style="font-family:var(--f-mono)">${esc(x.idNo || '')}</span></span></div>
   <div class="cvthumb">${img ? `<img alt="ID card of ${esc(x.name)}" src="${img}">` : img === '' ? 'No ID card' : 'Loading picture…'}</div>
   <div class="stack" style="gap:6px;align-items:flex-start"><span class="cvsecname" style="text-align:left">${esc(x.section || '')}</span>${x.plate ? `<span class="plate">🚗 ${esc(x.plate)}</span>` : ''}</div></div>`; }
 function regView(){
@@ -1225,8 +1232,8 @@ function cvVisible(s){ if (S.cvOnly && !onTrip(cvT(), s.key)) return false; if (
 function cvCard(s){ const img = S.cvCards[s.key], T = cvT(), on = onTrip(T, s.key);
   return `<div class="card cvcard ${on?'on':''}" data-cv="${esc(s.key)}" ${cvVisible(s)?'':'hidden'}>${idLed(s.idExp)}
   <label class="pick"><input type="checkbox" data-cvtick="${esc(s.key)}" ${on?'checked':''} aria-label="${esc(TRIP[T].name)}: ${esc(s.name)}">
-  <span class="cvno">${s.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(s.name)}</span><br><span class="small muted" style="font-family:var(--f-mono)">${esc(s.idNo||'No ID number')}</span>${idTag(s.idExp) ? '<br>' + idTag(s.idExp) : ''}</span></label>
-  <div class="cvthumb">${img ? `<img alt="ID card of ${esc(s.name)}" src="${img}">` : (s.hasImg ? 'Loading picture…' : 'No ID card')}</div>
+  <span class="cvno">${s.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(s.name)}</span><span class="small muted" style="font-family:var(--f-mono)">${esc(s.idNo||'No ID number')}</span></span></label>
+  <div class="cvthumb">${img ? `<img alt="ID card of ${esc(s.name)}" src="${img}">` : (s.hasImg ? 'Loading picture…' : 'No ID card')}${idTag(s.idExp)}</div>
   <div class="meta"><span style="font-family:var(--f-mono)">${esc(s.phone||'No phone')}</span><span class="small" style="overflow-wrap:anywhere">${s.email ? esc(s.email) : '<span class="muted">No email</span>'}</span>${(rg => rg ? `<span class="regtag">✍ Registered: ${esc(TRIP[rg.dir].name)}${rg.canDrive ? ' · 🚗 can drive' : ''}</span>` : '')(regOf(S.cvDate, s.key))}</div>
   <select class="cvcar" data-cvcar="${esc(s.key)}" aria-label="Vehicle for ${esc(s.name)}">${cvCarOptions(carOf(T, s.key))}</select>
   <div class="row"><span class="cvlbl"><span class="pill ${on?'p-done':'p-off'}">${on ? esc(TRIP[T].name) : 'Not on this trip'}</span><span class="cvsecname">${esc(secOf(s))}</span></span><span class="spacer"></span><button class="btn sm ghost" data-act="cvEdit" data-id="${esc(s.key)}">Edit</button></div></div>`; }
