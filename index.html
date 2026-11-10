@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47.13">
+<meta name="app-version" content="v47.14">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1082,7 +1082,7 @@ function stCard(x, cls){ const img = S.stCards[x.key];
   if (img === undefined) { S.stCards[x.key] = null; db.collection('convoyCards').doc(x.key).get().then(d => { S.stCards[x.key] = d.exists && d.data().img || ''; render(); }).catch(() => { S.stCards[x.key] = ''; render(); }); }
   return `<div class="card stcard ${cls || ''} ${S.profile && x.key === S.profile.key ? 'me' : ''}"><div class="row" style="gap:8px;flex-wrap:nowrap"><span class="cvno">${x.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(x.name)}</span><br><span class="small muted" style="font-family:var(--f-mono)">${esc(x.idNo || '')}</span></span></div>
   <div class="cvthumb">${img ? `<img alt="ID card of ${esc(x.name)}" src="${img}">` : img === '' ? 'No ID card' : 'Loading picture…'}</div>
-  <div class="row" style="gap:6px"><span class="cvsecname" style="text-align:left">${esc(x.section || '')}</span><span class="spacer"></span>${x.plate ? `<span class="plate">🚗 ${esc(x.plate)}</span>` : ''}</div></div>`; }
+  <div class="stack" style="gap:6px;align-items:flex-start"><span class="cvsecname" style="text-align:left">${esc(x.section || '')}</span>${x.plate ? `<span class="plate">🚗 ${esc(x.plate)}</span>` : ''}</div></div>`; }
 function regView(){
   if (!S.profileLoaded || !S.cvInfoLoaded || !S.cvRegsLoaded) return `<div class="empty"><b>Loading</b>Getting the convoy.</div>`;
   if (!S.profile) return `<div class="gate stack"><h2>Login not linked</h2><p class="muted">The ID <b>${esc(S.login.toUpperCase())}</b> is not on the convoy staff list. Ask the supervisor.</p></div>`;
