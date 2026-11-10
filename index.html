@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47.10">
+<meta name="app-version" content="v47.11">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -166,7 +166,15 @@ label.f select{width:100%;padding:10px 12px;border:1px solid var(--line);border-
 .secs .car[aria-pressed="true"] b{color:var(--accent-ink)}
 .sechead{display:flex;align-items:baseline;gap:8px;margin:6px 0 0;padding-bottom:6px;border-bottom:1px solid var(--line);font:800 15px/1.2 var(--f-label);letter-spacing:.04em;color:var(--accent)}
 .sechead span{font:500 13px/1.2 var(--f-body);color:var(--muted);letter-spacing:0}
-.cvcard{display:flex;flex-direction:column;gap:8px;opacity:.6}
+.cvcard{display:flex;flex-direction:column;gap:8px;opacity:.6;position:relative}
+.cvcard .pick{padding-right:22px}
+.led{display:inline-block;width:15px;height:15px;border-radius:50%;flex:none;border:2px solid rgba(255,255,255,.85)}
+.led.ok{background:#3ddc5a;box-shadow:0 0 10px 3px rgba(61,220,90,.75)}
+.led.none{background:#ff3b30;box-shadow:0 0 8px 2px rgba(255,59,48,.6)}
+.led.exp{background:#ff1744;animation:ledblink .8s steps(1) infinite}
+@keyframes ledblink{0%{opacity:1;background:#ff1744;box-shadow:0 0 12px 4px rgba(255,23,68,.9)}50%{opacity:.15;box-shadow:none}}
+.cvcard>.led{position:absolute;top:12px;right:12px}
+.ledkey{display:flex;flex-wrap:wrap;gap:14px;align-items:center;font-size:13px}.ledkey span{display:inline-flex;align-items:center;gap:6px}
 .cvcard.on{opacity:1;border-color:var(--ok)}
 .cvcard .pick{display:flex;align-items:center;gap:10px;cursor:pointer;min-width:0}
 .cvcard .pick input{width:24px;height:24px;flex:none;accent-color:var(--ok);cursor:pointer}
@@ -279,7 +287,7 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
 .idtag{display:inline-block;align-self:flex-start;background:#c62828;color:#fff;border-radius:6px;padding:2px 8px;font:700 12px/1.4 var(--f-body);animation:idblink 1.2s ease-in-out infinite}
 .idtag.soon{animation:none;background:var(--accent);color:var(--accent-ink)}
 .stme .card.idexp{border-color:#c62828;border-width:2px}
-@media (prefers-reduced-motion:reduce){.idalert,.idtag{animation:none}}
+@media (prefers-reduced-motion:reduce){.idalert,.idtag{animation:none}.led.exp{animation:none}}
 .yn{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:100;padding:16px}
 .ynbox{background:var(--bg);border:2px solid var(--accent);border-radius:16px;padding:20px;max-width:380px;width:100%}
 .carhead{display:flex;align-items:center;gap:10px;margin:6px 0 2px;padding:6px 12px;border-left:4px solid var(--accent);background:rgba(255,255,255,.04);border-radius:6px;font-size:15px}
@@ -801,6 +809,11 @@ const lc = s => String(s || '').trim().toLowerCase();
 const fmtD = iso => iso ? iso.split('-').reverse().join('/') : '';
 /* ID card expiry: 'exp' after the date, 'soon' within 30 days */
 function idState(iso){ if (!iso) return ''; const t = isoDay(new Date()); if (iso < t) return 'exp'; const s = new Date(); s.setDate(s.getDate() + 30); return iso <= isoDay(s) ? 'soon' : ''; }
+function idLed(iso){ const st = idState(iso); const c = !iso ? 'none' : st === 'exp' ? 'exp' : 'ok';
+  const t = !iso ? 'ID expiry date not set' : st === 'exp' ? 'ID expired ' + fmtD(iso) : 'ID valid until ' + fmtD(iso);
+  return `<span class="led ${c}" title="${t}" role="img" aria-label="${t}"></span>`; }
+function ledKey(){ const L = S.cvStaff || []; if (!L.length) return ''; const exp = L.filter(x => x.idExp && idState(x.idExp) === 'exp').length, none = L.filter(x => !x.idExp).length;
+  return `<div class="ledkey small"><b>ID cards:</b><span><span class="led ok"></span>Valid ${L.length - exp - none}</span><span><span class="led none"></span>Date not set ${none}</span><span><span class="led exp"></span>Expired ${exp}</span></div>`; }
 function idTag(iso){ const st = idState(iso); return st === 'exp' ? `<span class="idtag">⚠ ID expired ${fmtD(iso)}</span>` : st === 'soon' ? `<span class="idtag soon">ID expires ${fmtD(iso)}</span>` : ''; }
 const cvT = () => S.cvTrip === 'TO' || S.cvTrip === 'FROM' ? S.cvTrip : 'TO';
 const cvEditable = () => !S.viewer && S.cvDate >= isoDay(new Date()); // today and later can change; past dates are a record
@@ -1209,7 +1222,7 @@ function cvSecRow(){ const T = cvT(), used = cvSecList().filter(x => S.cvStaff.s
 function cvVisible(s){ if (S.cvOnly && !onTrip(cvT(), s.key)) return false; if (S.cvSec && lc(secOf(s)) !== lc(S.cvSec)) return false; const q = S.cvQuery.trim().toLowerCase();
   return !q || [s.no, s.name, s.idNo, s.phone, s.section, s.email].join(' ').toLowerCase().includes(q); }
 function cvCard(s){ const img = S.cvCards[s.key], T = cvT(), on = onTrip(T, s.key);
-  return `<div class="card cvcard ${on?'on':''}" data-cv="${esc(s.key)}" ${cvVisible(s)?'':'hidden'}>
+  return `<div class="card cvcard ${on?'on':''}" data-cv="${esc(s.key)}" ${cvVisible(s)?'':'hidden'}>${idLed(s.idExp)}
   <label class="pick"><input type="checkbox" data-cvtick="${esc(s.key)}" ${on?'checked':''} aria-label="${esc(TRIP[T].name)}: ${esc(s.name)}">
   <span class="cvno">${s.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(s.name)}</span><br><span class="small muted" style="font-family:var(--f-mono)">${esc(s.idNo||'No ID number')}</span>${idTag(s.idExp) ? '<br>' + idTag(s.idExp) : ''}</span></label>
   <div class="cvthumb">${img ? `<img alt="ID card of ${esc(s.name)}" src="${img}">` : (s.hasImg ? 'Loading picture…' : 'No ID card')}</div>
@@ -1255,7 +1268,7 @@ function cvOwnerView(){
     ${ed ? `<div class="row"><input class="inp" id="cvQ" placeholder="Search name, ID or number" value="${esc(S.cvQuery)}" style="flex:1;min-width:180px">
       <div class="seg"><button data-act="cvShow" data-v="all" aria-pressed="${!S.cvOnly}">All</button><button data-act="cvShow" data-v="on" aria-pressed="${S.cvOnly}">On this trip</button></div></div>
     ${cvSecRow()}
-    <div class="row"><button class="btn sm" data-act="cvAll" data-v="1">Tick all${S.cvSec ? ' ' + esc(S.cvSec) : ''}</button><button class="btn sm" data-act="cvAll" data-v="0">Untick all${S.cvSec ? ' ' + esc(S.cvSec) : ''}</button><span class="spacer"></span><button class="btn sm primary" data-act="cvAdd">+ Add new staff</button></div>
+    <div class="row"><button class="btn sm" data-act="cvAll" data-v="1">Tick all${S.cvSec ? ' ' + esc(S.cvSec) : ''}</button><button class="btn sm" data-act="cvAll" data-v="0">Untick all${S.cvSec ? ' ' + esc(S.cvSec) : ''}</button><span class="spacer"></span><button class="btn sm primary" data-act="cvAdd">+ Add new staff</button></div>${ledKey()}
     <div class="cvgrid">${list.map(cvCard).join('')}</div>` : ''}</section>`;
   return `<div class="cvlayout">${left}${main}${right}</div>`; }
 function convoyView(){
@@ -1263,7 +1276,7 @@ function convoyView(){
   if (!S.cvLoaded) return `<div class="empty"><b>Loading the staff list</b>Connecting to the team database.</div>`;
   if (S.cvDenied) return `<div class="empty"><b>The database blocked the Convoy list</b>Add the Convoy lines to the Firestore rules in the Firebase console, then reload this page.</div>`;
   if (!list.length && !S.viewer) return `<div class="empty stack" style="gap:10px"><b>No staff yet</b><span>Load your saved list of critical staff (the file <b>convoy-staff-import.json</b>), or add people one by one. Numbers start at 1 and never change.</span>
-    <div class="row" style="justify-content:center"><label class="btn primary">Load staff list file<input type="file" id="cvImport" accept=".json,application/json" hidden></label><button class="btn" data-act="cvAdd">+ Add new staff</button></div></div>`;
+    <div class="row" style="justify-content:center"><label class="btn primary">Load staff list file<input type="file" id="cvImport" accept=".json,application/json" hidden></label><button class="btn" data-act="cvAdd">+ Add new staff</button></div>${ledKey()}</div>`;
   if (S.owner) return cvOwnerView();
   const ed = cvEditable(), dt = new Date(S.cvDate + 'T12:00');
   return `<div class="stack">
@@ -1281,7 +1294,7 @@ function convoyView(){
   ${ed ? `<div class="row"><input class="inp" id="cvQ" placeholder="Search name, ID or number" value="${esc(S.cvQuery)}" style="flex:1;min-width:180px">
     <div class="seg"><button data-act="cvShow" data-v="all" aria-pressed="${!S.cvOnly}">All</button><button data-act="cvShow" data-v="on" aria-pressed="${S.cvOnly}">On this trip</button></div></div>
   ${cvSecRow()}
-  <div class="row"><button class="btn sm" data-act="cvAll" data-v="1">Tick all${S.cvSec ? ' ' + esc(S.cvSec) : ''}</button><button class="btn sm" data-act="cvAll" data-v="0">Untick all${S.cvSec ? ' ' + esc(S.cvSec) : ''}</button><span class="spacer"></span><button class="btn sm primary" data-act="cvAdd">+ Add new staff</button></div>
+  <div class="row"><button class="btn sm" data-act="cvAll" data-v="1">Tick all${S.cvSec ? ' ' + esc(S.cvSec) : ''}</button><button class="btn sm" data-act="cvAll" data-v="0">Untick all${S.cvSec ? ' ' + esc(S.cvSec) : ''}</button><span class="spacer"></span><button class="btn sm primary" data-act="cvAdd">+ Add new staff</button></div>${ledKey()}
   <div class="cvgrid">${list.map(cvCard).join('')}</div>` : ''}
   </div>`;
 }
