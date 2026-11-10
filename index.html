@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47.14">
+<meta name="app-version" content="v47.15">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1108,9 +1108,7 @@ function regView(){
   const me = `<aside class="stme"><div class="card${myIdSt === 'exp' ? ' idexp' : ''}"><div class="row" style="gap:8px;flex-wrap:nowrap"><p class="panelh" style="margin:0">My ID card</p><span class="spacer"></span>${idLed(myExp)}</div>${idTag(myExp)}
     ${myImg ? `<img alt="My ID card" src="${myImg}" data-act="myIdZoom">` : `<div class="cvthumb">${myImg === '' ? 'No ID card yet. Send it to the Admin.' : 'Loading picture…'}</div>`}
     <div class="stmeinfo"><b>${esc(p.name)}</b><div class="small muted" style="font-family:var(--f-mono)">${esc(p.idNo || '')}</div><div class="small" style="color:var(--accent);font-weight:700">${esc(p.section || '')}</div></div>
-    <div class="small stmeinfo" style="font-weight:700;color:${!myExp ? '#ff6b61' : myIdSt === 'exp' ? '#ff6b61' : '#3ddc5a'}">${!myExp ? 'Expiry date not set yet. Please inform the Admin.' : myIdSt === 'exp' ? 'Expired on ' + fmtD(myExp) + '. Send the new ID card to the Admin.' : 'Valid until ' + fmtD(myExp)}</div>
-    <div class="stack small muted stmeinfo" style="gap:4px"><span class="row" style="gap:6px"><span class="led ok"></span>ID card valid</span><span class="row" style="gap:6px"><span class="led none"></span>Expiry date not set</span><span class="row" style="gap:6px"><span class="led exp"></span>ID card expired</span></div>
-    <div class="small muted stmeinfo">If your ID card has expired, send the new one to the Admin. It appears here once updated.</div></div></aside>`;
+    <div class="small stmeinfo" style="font-weight:700;color:${!myExp ? '#ff6b61' : myIdSt === 'exp' ? '#ff6b61' : '#3ddc5a'}">${!myExp ? 'Expiry date not set yet. Please inform the Admin.' : myIdSt === 'exp' ? 'Expired on ' + fmtD(myExp) + '. Send the new ID card to the Admin.' : 'Valid until ' + fmtD(myExp)}</div></div></aside>`;
   const wrap = inner => `${idAlert}${nb}<div class="stlayout">${side}${me}<section class="stack" style="min-width:0">${back}${inner}${notesHtml}</section></div>`;
   if (!date) { const g = (S.cvGroup || []).slice().sort(bySection), nextUp = all.filter(d => d > today)[0];
     return wrap(`<div class="card stack" style="gap:6px;border-color:var(--accent)"><div class="row"><h2 style="margin:0">Our group</h2><span class="spacer"></span><span class="st no">No convoy today</span></div>
