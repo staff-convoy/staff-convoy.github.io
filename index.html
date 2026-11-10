@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47.11">
+<meta name="app-version" content="v47.12">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -1103,12 +1103,12 @@ function regView(){
   const nb = ncText || ncOpen || ncShut ? `<div class="notice${ncShut ? ' shut' : ''}"><b>📢 Notice</b>${ncText ? `<div style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(S.cvNotice.text)}</div>` : ''}${ncOpen ? `<div style="font-weight:700">⏰ ${esc(ncOpen)}</div>` : ''}${ncShut ? `<div style="font-weight:700">⛔ ${esc(ncShut)}</div>` : ''}</div>` : '';
   const p = S.profile, myImg = S.stCards[p.key]; if (myImg === undefined) stCard({key: p.key});
   const myExp = ((S.cvGroup || []).find(x => x.key === p.key) || {}).idExp || '', myIdSt = idState(myExp);
-  const idAlert = myIdSt === 'exp' ? `<div class="idalert" role="alert"><b>⚠ Your ID card has expired</b><div>It expired on ${fmtD(myExp)}. Please renew your ID card and send the new one to the supervisor.</div></div>`
-    : myIdSt === 'soon' ? `<div class="idalert soon"><b>ID card expiring soon</b><div>Your ID card expires on ${fmtD(myExp)}. Please renew it in time and send the new one to the supervisor.</div></div>` : '';
+  const idAlert = myIdSt === 'exp' ? `<div class="idalert" role="alert"><b>⚠ Your ID card has expired</b><div>It expired on ${fmtD(myExp)}. Please renew your ID card and send the new one to the Admin.</div></div>`
+    : myIdSt === 'soon' ? `<div class="idalert soon"><b>ID card expiring soon</b><div>Your ID card expires on ${fmtD(myExp)}. Please renew it in time and send the new one to the Admin.</div></div>` : '';
   const me = `<aside class="stme"><div class="card${myIdSt === 'exp' ? ' idexp' : ''}"><p class="panelh">My ID card</p>${idTag(myExp)}
-    ${myImg ? `<img alt="My ID card" src="${myImg}" data-act="myIdZoom">` : `<div class="cvthumb">${myImg === '' ? 'No ID card yet. Send it to the supervisor.' : 'Loading picture…'}</div>`}
+    ${myImg ? `<img alt="My ID card" src="${myImg}" data-act="myIdZoom">` : `<div class="cvthumb">${myImg === '' ? 'No ID card yet. Send it to the Admin.' : 'Loading picture…'}</div>`}
     <div class="stmeinfo"><b>${esc(p.name)}</b><div class="small muted" style="font-family:var(--f-mono)">${esc(p.idNo || '')}</div><div class="small" style="color:var(--accent);font-weight:700">${esc(p.section || '')}</div></div>
-    <div class="small muted stmeinfo">If your ID card has expired, send the new one to the supervisor. It appears here once updated.</div></div></aside>`;
+    <div class="small muted stmeinfo">If your ID card has expired, send the new one to the Admin. It appears here once updated.</div></div></aside>`;
   const wrap = inner => `${idAlert}${nb}<div class="stlayout">${side}${me}<section class="stack" style="min-width:0">${back}${inner}${notesHtml}</section></div>`;
   if (!date) { const g = (S.cvGroup || []).slice().sort(bySection), nextUp = all.filter(d => d > today)[0];
     return wrap(`<div class="card stack" style="gap:6px;border-color:var(--accent)"><div class="row"><h2 style="margin:0">Our group</h2><span class="spacer"></span><span class="st no">No convoy today</span></div>
