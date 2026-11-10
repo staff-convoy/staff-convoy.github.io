@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="app-version" content="v47.9">
+<meta name="app-version" content="v47.10">
 <meta name="theme-color" content="#0B1F3F">
 <title>Critical Staff</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -266,12 +266,20 @@ body.full .wrap{max-width:1680px;padding-inline:20px}
   .stme .panelh{font-size:10px;text-align:center}
   .stme .stmeinfo{display:none}
   .stme img{border-radius:6px}
-  .stme .cvthumb{font-size:10px;min-height:60px}}
+  .stme .cvthumb{font-size:10px;min-height:60px}
+  .stme .idtag{font-size:10px;padding:1px 4px;align-self:stretch;text-align:center}}
 .stgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
 .stcard{display:flex;flex-direction:column;gap:8px}
 .stcard.me{border-color:var(--accent)}
 .notice{background:var(--accent);color:var(--accent-ink);border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:4px;font-size:16px}
 .notice.shut{background:#d32f2f;color:#fff}
+@keyframes idblink{0%,100%{background:#c62828;box-shadow:0 0 0 0 rgba(198,40,40,.7)}50%{background:#7f0000;box-shadow:0 0 0 6px rgba(198,40,40,0)}}
+.idalert{background:#c62828;color:#fff;border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;flex-direction:column;gap:4px;font-size:16px;animation:idblink 1.2s ease-in-out infinite}
+.idalert.soon{animation:none;background:var(--accent);color:var(--accent-ink)}
+.idtag{display:inline-block;align-self:flex-start;background:#c62828;color:#fff;border-radius:6px;padding:2px 8px;font:700 12px/1.4 var(--f-body);animation:idblink 1.2s ease-in-out infinite}
+.idtag.soon{animation:none;background:var(--accent);color:var(--accent-ink)}
+.stme .card.idexp{border-color:#c62828;border-width:2px}
+@media (prefers-reduced-motion:reduce){.idalert,.idtag{animation:none}}
 .yn{position:fixed;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;z-index:100;padding:16px}
 .ynbox{background:var(--bg);border:2px solid var(--accent);border-radius:16px;padding:20px;max-width:380px;width:100%}
 .carhead{display:flex;align-items:center;gap:10px;margin:6px 0 2px;padding:6px 12px;border-left:4px solid var(--accent);background:rgba(255,255,255,.04);border-radius:6px;font-size:15px}
@@ -791,6 +799,9 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet
 const TRIP = {TO: {name: 'To Naqoura', route: 'Sector West → UNIFIL HQ Naqoura'}, FROM: {name: 'From Naqoura', route: 'UNIFIL HQ Naqoura → Sector West'}};
 const lc = s => String(s || '').trim().toLowerCase();
 const fmtD = iso => iso ? iso.split('-').reverse().join('/') : '';
+/* ID card expiry: 'exp' after the date, 'soon' within 30 days */
+function idState(iso){ if (!iso) return ''; const t = isoDay(new Date()); if (iso < t) return 'exp'; const s = new Date(); s.setDate(s.getDate() + 30); return iso <= isoDay(s) ? 'soon' : ''; }
+function idTag(iso){ const st = idState(iso); return st === 'exp' ? `<span class="idtag">⚠ ID expired ${fmtD(iso)}</span>` : st === 'soon' ? `<span class="idtag soon">ID expires ${fmtD(iso)}</span>` : ''; }
 const cvT = () => S.cvTrip === 'TO' || S.cvTrip === 'FROM' ? S.cvTrip : 'TO';
 const cvEditable = () => !S.viewer && S.cvDate >= isoDay(new Date()); // today and later can change; past dates are a record
 const recOf = (date, T) => (S.cvDays[date] || {})[T];
@@ -987,7 +998,7 @@ function cvLoginSheet(){ const want = cvLoginWanted(), have = S.cvLogins || {}, 
 
 // the whole group, for the staff page on days with no convoy: name, ID and section only
 function cvGroupSync(){ if (!S.owner || !S.cvInfoLoaded) return;
-  const list = S.cvStaff.map(s => ({key: s.key, no: s.no, name: s.name || '', idNo: s.idNo || '', section: s.section || ''}));
+  const list = S.cvStaff.map(s => ({key: s.key, no: s.no, name: s.name || '', idNo: s.idNo || '', section: s.section || '', idExp: s.idExp || ''}));
   if (JSON.stringify(list) === JSON.stringify(S.cvGroup || null)) return; S.cvGroup = list;
   db.collection('convoyInfo').doc('group').set({kind: 'group', list}).catch(e => console.warn(e)); }
 /* --- Visits: each staff sign-in is recorded; only the supervisor reads the archive --- */
@@ -1078,11 +1089,14 @@ function regView(){
   const ncText = S.cvNotice && S.cvNotice.text.trim(), ncOpen = S.cvNotice && S.cvNotice.showClose && closeLine(), ncShut = S.cvNotice && S.cvNotice.showClose && !ncOpen && closedLine();
   const nb = ncText || ncOpen || ncShut ? `<div class="notice${ncShut ? ' shut' : ''}"><b>📢 Notice</b>${ncText ? `<div style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(S.cvNotice.text)}</div>` : ''}${ncOpen ? `<div style="font-weight:700">⏰ ${esc(ncOpen)}</div>` : ''}${ncShut ? `<div style="font-weight:700">⛔ ${esc(ncShut)}</div>` : ''}</div>` : '';
   const p = S.profile, myImg = S.stCards[p.key]; if (myImg === undefined) stCard({key: p.key});
-  const me = `<aside class="stme"><div class="card"><p class="panelh">My ID card</p>
+  const myExp = ((S.cvGroup || []).find(x => x.key === p.key) || {}).idExp || '', myIdSt = idState(myExp);
+  const idAlert = myIdSt === 'exp' ? `<div class="idalert" role="alert"><b>⚠ Your ID card has expired</b><div>It expired on ${fmtD(myExp)}. Please renew your ID card and send the new one to the supervisor.</div></div>`
+    : myIdSt === 'soon' ? `<div class="idalert soon"><b>ID card expiring soon</b><div>Your ID card expires on ${fmtD(myExp)}. Please renew it in time and send the new one to the supervisor.</div></div>` : '';
+  const me = `<aside class="stme"><div class="card${myIdSt === 'exp' ? ' idexp' : ''}"><p class="panelh">My ID card</p>${idTag(myExp)}
     ${myImg ? `<img alt="My ID card" src="${myImg}" data-act="myIdZoom">` : `<div class="cvthumb">${myImg === '' ? 'No ID card yet. Send it to the supervisor.' : 'Loading picture…'}</div>`}
     <div class="stmeinfo"><b>${esc(p.name)}</b><div class="small muted" style="font-family:var(--f-mono)">${esc(p.idNo || '')}</div><div class="small" style="color:var(--accent);font-weight:700">${esc(p.section || '')}</div></div>
     <div class="small muted stmeinfo">If your ID card has expired, send the new one to the supervisor. It appears here once updated.</div></div></aside>`;
-  const wrap = inner => `${nb}<div class="stlayout">${side}${me}<section class="stack" style="min-width:0">${back}${inner}${notesHtml}</section></div>`;
+  const wrap = inner => `${idAlert}${nb}<div class="stlayout">${side}${me}<section class="stack" style="min-width:0">${back}${inner}${notesHtml}</section></div>`;
   if (!date) { const g = (S.cvGroup || []).slice().sort(bySection), nextUp = all.filter(d => d > today)[0];
     return wrap(`<div class="card stack" style="gap:6px;border-color:var(--accent)"><div class="row"><h2 style="margin:0">Our group</h2><span class="spacer"></span><span class="st no">No convoy today</span></div>
       <div class="small muted">${g.length} critical staff${lastPast ? ` · last convoy <a href="#reg=${lastPast}">${fmtD(lastPast)}</a>` : ''}${nextUp ? ` · next convoy <a href="#reg=${nextUp}">${fmtD(nextUp)}</a>` : ''}. Tap a date in the calendar to see who travelled.</div></div>
@@ -1197,7 +1211,7 @@ function cvVisible(s){ if (S.cvOnly && !onTrip(cvT(), s.key)) return false; if (
 function cvCard(s){ const img = S.cvCards[s.key], T = cvT(), on = onTrip(T, s.key);
   return `<div class="card cvcard ${on?'on':''}" data-cv="${esc(s.key)}" ${cvVisible(s)?'':'hidden'}>
   <label class="pick"><input type="checkbox" data-cvtick="${esc(s.key)}" ${on?'checked':''} aria-label="${esc(TRIP[T].name)}: ${esc(s.name)}">
-  <span class="cvno">${s.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(s.name)}</span><br><span class="small muted" style="font-family:var(--f-mono)">${esc(s.idNo||'No ID number')}</span></span></label>
+  <span class="cvno">${s.no}</span><span style="min-width:0;flex:1"><span class="nmx">${esc(s.name)}</span><br><span class="small muted" style="font-family:var(--f-mono)">${esc(s.idNo||'No ID number')}</span>${idTag(s.idExp) ? '<br>' + idTag(s.idExp) : ''}</span></label>
   <div class="cvthumb">${img ? `<img alt="ID card of ${esc(s.name)}" src="${img}">` : (s.hasImg ? 'Loading picture…' : 'No ID card')}</div>
   <div class="meta"><span style="font-family:var(--f-mono)">${esc(s.phone||'No phone')}</span><span class="small" style="overflow-wrap:anywhere">${s.email ? esc(s.email) : '<span class="muted">No email</span>'}</span>${(rg => rg ? `<span class="regtag">✍ Registered: ${esc(TRIP[rg.dir].name)}${rg.canDrive ? ' · 🚗 can drive' : ''}</span>` : '')(regOf(S.cvDate, s.key))}</div>
   <select class="cvcar" data-cvcar="${esc(s.key)}" aria-label="Vehicle for ${esc(s.name)}">${cvCarOptions(carOf(T, s.key))}</select>
@@ -1344,6 +1358,7 @@ function cvForm(s){ cvEditing = s || null; cvPending = null; const sec = s ? sec
   <label class="f">Section<select id="cvSec">${cvSecOptions(sec)}</select></label></div>
   <div class="grid2"><label class="f">Mobile<input id="cvPhone" maxlength="30" inputmode="tel" value="${esc(s && s.phone)}"></label>
   <label class="f">Email<input id="cvEmail" type="email" maxlength="120" autocapitalize="none" value="${esc(s && s.email)}" placeholder="name@un.org"></label></div>
+  <label class="f">ID card expiry date<input type="date" id="cvIdExp" value="${esc(s && s.idExp)}"></label>
   <label class="f">ID card picture<input type="file" id="cvFile" accept="image/*" class="inp"></label>
   <div class="row" style="align-items:flex-start"><div class="cvprev" id="cvPrev">${img ? `<img alt="" src="${img}">` : 'No picture yet'}</div>
   <button class="btn sm" type="button" data-act="cvRotate">Turn picture ↻</button></div>
@@ -1367,7 +1382,7 @@ async function cvSave(){ const name = val('cvName'); if (!name) { $('#cvFormMsg'
   const btn = $('#cvSave'); btn.disabled = true; btn.textContent = 'Saving…';
   const email = val('cvEmail').toLowerCase();
   if (email && !/^[^\s@;,]+@[^\s@;,]+\.[^\s@;,]+$/.test(email)) { $('#cvFormMsg').textContent = 'That email does not look right, for example name@un.org'; btn.disabled = false; btn.textContent = 'Save'; return; }
-  const body = {name, idNo: val('cvIdNo'), section: val('cvSec'), phone: val('cvPhone'), email};
+  const body = {name, idNo: val('cvIdNo'), section: val('cvSec'), phone: val('cvPhone'), email, idExp: val('cvIdExp')};
   try {
     const key = cvEditing ? cvEditing.key : cvKey(cvNext());
     if (cvPending) { await db.collection('convoyCards').doc(key).set({img: cvPending}); body.hasImg = true; }
