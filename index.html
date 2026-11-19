@@ -385,11 +385,11 @@ let dataOn = false;
 /* ---------- sign in ---------- */
 auth.onAuthStateChanged(u => {
   unsubs.forEach(f => f()); unsubs = []; dataOn = false; cvCardsOn = false; S.cvStaff = []; S.cvCards = {}; S.cvLoaded = false;
-  S.user = u; S.email = u && u.email ? u.email.toLowerCase() : ''; S.owner = !!u && u.emailVerified && S.email === OWNER; S.viewer = !!u && S.email === VIEWER;
+  S.user = u; S.email = u && u.email ? u.email.toLowerCase() : ''; S.owner = !!u && S.email === OWNER; S.viewer = !!u && S.email === VIEWER;
   S.member = !!u && isStaffEmail(S.email); S.login = S.member ? S.email.slice(8, S.email.indexOf('@')) : '';
   S.cvConvs = {}; S.cvRegs = {}; S.cvRegsLoaded = false; S.visits = null; S.visitsOn = false; visitSent = false; S.cvLogins = null; S.profile = null; S.profileLoaded = false; S.stCards = {};
   S.team = {}; S.attendance = {}; S.notes = []; S.loaded = false; S.me = null;
-  if (u && (u.emailVerified || S.viewer || S.member)) listen();
+  if (u && (u.emailVerified || S.owner || S.viewer || S.member)) listen();
   render();
 });
 
@@ -487,14 +487,14 @@ let fitT; addEventListener('resize', () => { clearTimeout(fitT); fitT = setTimeo
 function render(){
   document.title = 'Critical Staff';
   if (typing()) { pending = true; return; }
-  const ok = S.user && (S.user.emailVerified || S.viewer || S.member) && S.loaded && allowed();
+  const ok = S.user && (S.user.emailVerified || S.owner || S.viewer || S.member) && S.loaded && allowed();
   $('#me').innerHTML = S.user ? `<div>${esc(S.owner ? 'Elias FARAH · Admin' : S.viewer ? 'Staff · view only' : S.member ? (S.profile && S.profile.name) || S.login.toUpperCase() : (S.me && S.me.name) || S.email)}</div><button data-act="signout">Sign out</button>` : '';
   const tabs = S.viewer || S.member ? TABS.filter(([k]) => k === 'convoy') : TABS.filter(([k]) => !OWNER_TABS.includes(k) || S.owner);
   if (S.user && S.loaded && !tabs.some(([k]) => k === S.tab)) S.tab = tabs[0][0];
   $('#tabs').innerHTML = ok && !S.member ? tabs.map(([k,l]) => `<button class="tab" data-tab="${k}" aria-selected="${S.tab===k}">${l}${k==='orders'&&newCount()?`<span class="dot">${newCount()}</span>`:''}${k==='support'&&openSupport().length?`<span class="dot red">${openSupport().length}</span>`:''}</button>`).join('') : '';
   const v = $('#view'); v.classList.toggle('wide', S.tab === 'attendance'); document.body.classList.toggle('full', !!((S.owner && (S.tab === 'convoy' || S.tab === 'notes')) || (S.member && S.tab === 'convoy'))); const sx = v.querySelector('.scrollx')?.scrollLeft;
   if (!S.user) v.innerHTML = authView();
-  else if (!S.user.emailVerified && !S.viewer && !S.member) v.innerHTML = verifyView();
+  else if (!S.user.emailVerified && !S.owner && !S.viewer && !S.member) v.innerHTML = verifyView();
   else if (!S.loaded) v.innerHTML = `<div class="empty"><b>Loading</b>Checking your access.</div>`;
   else if (!allowed()) v.innerHTML = `<div class="gate stack"><h2>${S.me ? 'Access removed' : 'Not approved yet'}</h2><p class="muted">${S.me ? 'The supervisor has removed your access.' : 'Ask the supervisor to add <b>'+esc(S.email)+'</b> to the team. This page opens as soon as they do.'}</p></div>`;
   else v.innerHTML = ({orders:ordersView, support:supportView, kwh:kwhView, attendance:attView, notes:notesView, visits:visitsView, convoy:S.member ? regView : convoyView, team:teamView})[S.tab]();
